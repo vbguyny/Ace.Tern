@@ -4,7 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Tern.Ace demo</title>
+
+    <!--<link href='https://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'>-->
+
     <style type="text/css" media="screen">
+        
         body {
             overflow: hidden;
             background-color: #EFEFEF;
@@ -18,6 +22,8 @@
             right: 320px;
             left: 0;
             border-right: 1px solid black;
+            font-family: "Courier New";
+            font-size: 10pt;
         }
         
         #info {
@@ -89,6 +95,7 @@
     </div>
     <!-- load ace -->
     <script src="ace-builds/src-noconflict/ace.js"></script>
+    <!--<script src="ace-builds/src-noconflict/ext-language_tools.js"></script>-->
     <script>
         // set to false to prevent using worker, which is needed to run this from local html file due to browser security restritions
         var useWebWorker = window.location.search.toLowerCase().indexOf('noworker') == -1;
@@ -101,7 +108,11 @@
         setModeFromHash(); //set editor content for demo only
         
         //#region not relevant to tern, just some deafults I prefer
-        editor.setTheme("ace/theme/chrome");
+
+        //editor.setTheme("ace/theme/chrome");
+        //editor.setTheme("ace/theme/mono_industrial");
+        editor.setTheme("ace/theme/rosebud");
+
         editor.getSession().setUseWrapMode(true);
         editor.getSession().setWrapLimitRange(null, null);
         editor.setShowPrintMargin(false);
@@ -117,7 +128,11 @@
                  */
                 enableTern: {
                     /* http://ternjs.net/doc/manual.html#option_defs */
-                    defs: ['browser', 'ecma5'],
+                    //defs: ['ecma5'],
+                    //defs: ['browser', 'ecma5'],
+                    //defs: ['jquery', 'browser', 'ecma5'],
+                    defs: ['jquery', 'browser', 'ecma5', 'rosebud'],
+                    //defs: ['ecma5', 'rosebud'],
                     /* http://ternjs.net/doc/manual.html#plugins */
                     plugins: {
                         doc_comment: {
@@ -153,6 +168,7 @@
                  * For javascript mode the basic auto completion will be added to completion results if tern fails to find completions or if you double tab the hotkey for get completion (default is ctrl+space, so hit ctrl+space twice rapidly to include basic text completions in the result)
                  */
                 enableBasicAutocompletion: true,
+                enableLiveAutocompletion: true
             });
         });
         
@@ -197,8 +213,10 @@
         
             editor.session.setMode("ace/mode/" + mode);
             GetFile(mode == 'javascript' ? 'DemoJavascript.js' : 'demo.html', function (f) {
-                editor.setValue(f);
-        
+                //https://ace.c9.io/#nav=api&api=editor
+                //editor.setValue(f);
+                editor.setValue(f, -1);
+                editor.focus();
             });
         }
         //#endregion
