@@ -1,10 +1,10 @@
-[Live Demo] (http://sevin7676.github.io/Ace.Tern/demo.html)
+[Live Demo] (http://vbguyny.github.io/Ace.Tern/demo.html)
 ========
 
 Ace.Tern
 ========
 
-Tern plugin for Ace Editor
+Tern plugin for Ace Editor [Fork]
 
 
 Project Status
