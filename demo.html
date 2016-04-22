@@ -131,7 +131,9 @@
                     //defs: ['ecma5'],
                     //defs: ['browser', 'ecma5'],
                     //defs: ['jquery', 'browser', 'ecma5'],
-                    defs: ['jquery', 'browser', 'ecma5', 'rosebud'],
+                    //defs: ['jquery', 'browser', 'ecma5', 'rosebud'],
+                    defs: ['ecma5', 'rosebud'],
+                    //defs: ['rosebud'],
                     //defs: ['ecma5', 'rosebud'],
                     /* http://ternjs.net/doc/manual.html#plugins */
                     plugins: {
@@ -156,6 +158,35 @@
                         //once tern is enabled, it can be accessed via editor.ternServer
                         console.log('editor.ternServer:', editor.ternServer);
                     },
+
+                    //miscCodeContent: "/*Comment*/ var RmParam = {\n /*This is a comment*/ Drive: '',\n /* comment 2 */ UserId: ''\n};",
+                    //miscCodeContent: "/*Comment*/ var RmParam = [];\nRmParam['Drive'] = '';\nRmParam['UserId'] = '';\n",
+                    miscCodeContent: "//PmsCmn Object\n"
+                        + "var RmParam = {\n"
+                        + " //The Mdsppath\n"
+                        + " Drive: '',\n"
+                        + " //The current User Id\n"
+                        + " UserId: '',\n"
+                        + "};\n"
+                        + "// Report Field Object\n"
+                        + "var rptField = function()\n"
+                        + "{\n"
+                        + " //Tag Property\n"
+                        + " this.Tag = '';\n"
+                        + " //Value Property\n"
+                        + " this.Value = '';\n"
+                        + "};\n"
+                        + "// Report Object\n"
+                        + "var rpt = {\n"
+                        + " //Fields Collection\n"
+                        + " Fields: {\n"
+                        + "  Item: {\n"
+                        + "   BuildingNumber: new rptField(),\n"
+                        + "   UnitNo: new rptField(),\n"
+                        + "  }\n,"
+                        + "  Count: 0,"
+                        + " }\n"
+                        + "};\n",
                 },
                 /**
                  * when using tern, it takes over Ace's built in snippets support.

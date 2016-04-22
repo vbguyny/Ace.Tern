@@ -1515,6 +1515,8 @@ var Autocomplete = function() {
         "PageDown": function(editor) { editor.completer.popup.gotoPageDown(); }
     };
 
+    var snippetResults;
+
     this.gatherCompletions = function(editor, callback) {
         var session = editor.getSession();
         var pos = editor.getCursorPosition();
@@ -1525,12 +1527,39 @@ var Autocomplete = function() {
         this.base = session.doc.createAnchor(pos.row, pos.column - prefix.length);
         this.base.$insertRight = true;
 
+        snippetResults = [];
+
         var matches = [];
         var total = editor.completers.length;
         editor.completers.forEach(function(completer, i) {
             completer.getCompletions(editor, session, pos, prefix, function(err, results) {
+//                if (!err)
+//                    matches = matches.concat(results);
+
+                var result;
+                var isSnippets = false;
+
                 if (!err)
-                    matches = matches.concat(results);
+                {
+                    isSnippets = false;
+                    if (results.length > 0)
+                    {
+                        result = results[0];
+                        if (result.meta == "snippet")
+                        {
+                            snippetResults = results;
+                            isSnippets = true;
+                            return;
+                        }
+                    }
+
+                    if (isSnippets == false)
+                    {
+                        matches = matches.concat(results);
+                        matches = matches.concat(snippetResults);
+                    }
+                }
+
                 var pos = editor.getCursorPosition();
                 var line = session.getLine(pos.row);
                 callback(null, {
@@ -1598,12 +1627,53 @@ var Autocomplete = function() {
             if (prefix.indexOf(results.prefix) !== 0 || _id != this.gatherCompletionsId)
                 return;
 
+            var match;
+            var isGlobal = false;
+
+            if (matches.length > 0)
+            {
+                match = matches[0];
+
+//                switch (match.value || match.caption)
+//                {
+//                    case "jQuery":
+//                    case "location":
+//                    case "Object":
+//                    case "break":
+//                    case "requ":
+//                        isGlobal = true;
+//                        break;
+//                }
+
+                if (match.origin != "[doc]")
+                {
+                    isGlobal = true;
+                }
+
+//                for (var i = 0; i < matches.length; i++)
+//                {
+//                    match = matches[i];
+//                    if (match.depth > 0)
+//                    {
+//                        isGlobal = false;
+//                    }
+//                }
+
+            }
+
             if (this.isInElement == true)
             {
+
+                if (isGlobal == true)
+                {
+                    matches = [];
+                }
+
                 for (var i = 0; i < matches.length; i++)
                 {
-                    var match = matches[i];
+                    match = matches[i];
 
+                    //if (match.depth != 0 || match.origin != "[doc]")
                     if (match.depth != 0)
                     {
                         matches.splice(i, 1);
@@ -1616,7 +1686,21 @@ var Autocomplete = function() {
                     }
                 }
 
-                this.isInElement = false;
+                //this.isInElement = false;
+            }
+
+            if (isGlobal == false)
+            {
+                for (var i = 0; i < matches.length; i++)
+                {
+                    match = matches[i];
+
+                    if (match.meta == "snippet")
+                    {
+                        matches.splice(i, 1);
+                        i--;
+                    }
+                }
             }
 
             this.completions = new FilteredList(matches);
@@ -1717,6 +1801,7 @@ Autocomplete.startCommand = {
             editor.completer = new Autocomplete();
         editor.completer.autoInsert = false;
         editor.completer.autoSelect = true;
+        //editor.completer.isInElement = (getElementPos(editor) ? true : false);
         editor.completer.showPopup(editor);
         editor.completer.cancelContextMenu();
     },
@@ -1740,10 +1825,22 @@ var FilteredList = function(array, filterText, mutateData) {
         matches = this.filterCompletions(matches, this.filterText);
         matches = matches.sort(function(a, b) {
             //return b.exactMatch - a.exactMatch || b.score - a.score;
+
             if (b.exactMatch - a.exactMatch) return (b.exactMatch - a.exactMatch); // Found an exact match
+
+            var aIsSnippet = (a.value ? false : true);
+            var bIsSnippet = (b.value ? false : true);
+
+            var aValue = (a.value || a.caption).toLowerCase();
+            var bValue = (b.value || b.caption).toLowerCase();
             
-            var aValue = a.value.toLowerCase();
-            var bValue = b.value.toLowerCase();
+//            if (a.value || b.value)
+//            {
+//                console.log("Snippet ?");
+//            }
+
+//            var aValue = a.value.toLowerCase();
+//            var bValue = b.value.toLowerCase();
 
             if (aValue < bValue) return -1; // a < b
             if (aValue > bValue) return 1; // a > b
@@ -1758,6 +1855,15 @@ var FilteredList = function(array, filterText, mutateData) {
                 {
                     return -1;
                 }
+            }
+
+            if (aIsSnippet == true)
+            {
+                return 1;
+            }
+            else if (bIsSnippet == true)
+            {
+                return -1;
             }
 
             return 0; // a = b
@@ -1867,6 +1973,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         this.aceTextCompletor = null;
         this.lastAutoCompleteFireTime = null;
         this.queryTimeout = 3000;
+        this.miscCodeContent = options.miscCodeContent;
         if (this.options.queryTimeout && !isNaN(parseInt(this.options.queryTimeout))) this.queryTimeout = parseInt(this.options.queryTimeout);
     };
     var Pos = function (line, ch) {
@@ -2164,11 +2271,15 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             }
         }
 
-        files.push({
-            type: "full",
-            name: "rosebud",
-            text: "/*Comment*/ var RmParam = {\n /*This is a comment*/ Drive: '',\n /* comment 2 */ UserId: ''\n};"
-        });
+        if (ts.miscCodeContent)
+        {
+            files.push({
+                type: "full",
+                name: "miscCodeContent",
+                //text: "/*Comment*/ var RmParam = {\n /*This is a comment*/ Drive: '',\n /* comment 2 */ UserId: ''\n};"
+                text: ts.miscCodeContent
+            });
+        }
 
         return {
             query: query,
@@ -2305,7 +2416,8 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         score: 99999,
                         //meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
                         meta: "script",
-                        depth: item.depth
+                        depth: item.depth,
+                        origin: item.origin
                     };
                 });
                 if (debugCompletions) console.time('get and merge other completions');
@@ -3361,13 +3473,19 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         {
             //console.log("In array element!");
 
-            if (!editor.completer) {
+            if (!editor.completer)
+            {
                 Autocomplete.startCommand.exec(editor);
             }
             editor.completer.isInElement = true;
             editor.completer.showPopup(editor);
             editor.completer.cancelContextMenu();
             return;
+        }
+
+        if (editor.completer)
+        {
+            editor.completer.isInElement = false;
         }
         
         var callPos = getCallPos(editor);
@@ -4096,6 +4214,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         + ".Ace-Tern-completion-number:before {content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
         + ".Ace-Tern-completion-string:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
         + ".Ace-Tern-completion-bool:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
+        + ".Ace-Tern-completion-snippet:before { content:''; background-image: url('./ace-builds/src-noconflict/images/snippet.png'); } "
         + ".Ace-Tern-completion-guess { color: #999; } "
         + ".Ace-Tern-hint-doc { max-width: 35em; } "
         + ".Ace-Tern-fhint-guess { opacity: .7; } "
@@ -4125,6 +4244,9 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
     "use strict";
     var config = require("../config");
     var snippetManager = require("../snippets").snippetManager;
+    
+    var cls = "Ace-Tern-";
+
     var snippetCompleter = {
         getCompletions: function (editor, session, pos, prefix, callback) {
             var snippetMap = snippetManager.snippetMap;
@@ -4138,7 +4260,10 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
                     completions.push({
                         caption: caption,
                         snippet: s.content,
-                        meta: s.tabTrigger && !s.name ? s.tabTrigger + "\u21E5 " : "snippet"
+                        meta: s.tabTrigger && !s.name ? s.tabTrigger + "\u21E5 " : "snippet",
+                        iconClass: " " + cls + "completion " + cls + "completion-snippet",
+                        origin: "snippet",
+                        value: caption
                     });
                 }
             }, this);
@@ -4255,6 +4380,7 @@ var doLiveAutocomplete = function(e) {
                 Autocomplete.startCommand.exec(editor);
             }
             editor.completer.autoInsert = false;
+            //editor.completer.isInElement = (getElementPos(editor) ? true : false);
             editor.completer.showPopup(editor);
         }
     }
@@ -4270,13 +4396,18 @@ var doLiveAutocomplete = function(e) {
             }
             editor.completers = [];
             if (editor.$enableSnippets) { //snippets are allowed with or without tern
-//                editor.completers.push(snippetCompleter);
+                //editor.completers.push(snippetCompleter);
             }
             
             if (editor.ternServer && editor.$enableTern) {
                 if (editor.ternServer.enabledAtCurrentLocation(editor)) {
                     editor.completers.push(editor.ternServer);
                     //editor.ternServer.aceTextCompletor = textCompleter; //9.30.2014- give tern the text completor
+
+                    if (editor.$enableSnippets) { //snippets are allowed with or without tern
+                        editor.completers.push(snippetCompleter);
+                    }
+
                 }
                 else {
                     if (editor.$enableBasicAutocompletion) {
@@ -4289,6 +4420,7 @@ var doLiveAutocomplete = function(e) {
 //                    editor.completers.push(textCompleter, keyWordCompleter);
                 }
             }
+            //editor.completer.isInElement = (getElementPos(editor) ? true : false);
             editor.completer.showPopup(editor);
             editor.completer.cancelContextMenu();
         },

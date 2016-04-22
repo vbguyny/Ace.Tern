@@ -5726,6 +5726,12 @@ if (isWorker || isChromeApp) {
                 if (!base) base = exports.base;
                 try {;
                     (function c(node, st, override) {
+                        
+                        if (!node)
+                        {
+                            return;
+                        }
+
                         var type = override || node.type;
                         if (node.start > pos || node.end < pos) {
                             return;
@@ -6687,6 +6693,12 @@ if (isWorker || isChromeApp) {
             }
             rec.depth = depth;
 
+            rec.origin = undefined;
+            if (obj && obj.origin)
+            {
+                rec.origin = obj.origin;
+            }
+
             completions.push(rec);
 
             if (obj && (query.types || query.docs || query.urls || query.origins)) {
@@ -6710,7 +6722,8 @@ if (isWorker || isChromeApp) {
         // Decide whether this is an object property, either in a member
         // expression or an object literal.
         if (exprAt) {
-            if (exprAt.node.type == "MemberExpression" && exprAt.node.object.end < wordStart) {
+            //if (exprAt.node.type == "MemberExpression" && exprAt.node.object.end < wordStart) {
+            if (exprAt.node.type == "MemberExpression" && exprAt.node.object && exprAt.node.object.end < wordStart) {
                 memberExpr = exprAt;
             }
             else if (isStringAround(exprAt.node, wordStart, wordEnd)) {
@@ -6741,6 +6754,20 @@ if (isWorker || isChromeApp) {
             ignoreObj = objLit.node.objType;
         }
         else if (memberExpr) {
+            
+            if (memberExpr.node.property.type != memberExpr.node.object.type)
+            {
+                console.log("Manually changing property node to match that of the object.");
+
+                memberExpr.node.property = {
+                    end: (memberExpr.node.object.end + 1),
+                    name: "✖",
+                    sourceFile: memberExpr.node.sourceFile,
+                    start: (memberExpr.node.object.end + 1),
+                    type: memberExpr.node.object.type
+                };
+            }
+            
             prop = memberExpr.node.property;
             prop = prop.type == "Literal" ? prop.value.slice(1) : prop.name;
             memberExpr.node = memberExpr.node.object;
@@ -21912,23 +21939,23 @@ var def_rosebud = {
             "!doc": "Checks to see that the record pointer is valid."
         },
         "!doc": "Static routines for the Multi Data Property Management System."
-    },
-    "rpt": {
-        "Fields1": {
-            "item": {
-                "!type": "fn(key: string) -> ?",
-                "!doc": "The field object."
-            },
-            "!doc": "Report Generator fields collection."
-        },
-        "Fields2": {
-            "item": {
-                "!type": "[?]",
-                "!doc": "The field object."
-            },
-            "!doc": "Report Generator fields collection."
-        },
-        "!doc": "Report Generator object."
     }
+//    "rpt": {
+//        "Fields1": {
+//            "item": {
+//                "!type": "fn(key: string) -> ?",
+//                "!doc": "The field object."
+//            },
+//            "!doc": "Report Generator fields collection."
+//        },
+//        "Fields2": {
+//            "item": {
+//                "!type": "[?]",
+//                "!doc": "The field object."
+//            },
+//            "!doc": "Report Generator fields collection."
+//        },
+//        "!doc": "Report Generator object."
+//    }
 };
 
