@@ -2668,7 +2668,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                     return null;
                 };
                 var getParamDetailedName = function (param) {
-                    var name = param.name;
+                    var name = param.name; 
                     if (param.optional === true) {
                         if (param.defaultValue) {
                             name = "[" + name + "=" + param.defaultValue + "]";
@@ -2678,7 +2678,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         }
                     }
                     return name;
-                };
+                }; 
                 var useDetailedArgHints = params.length === 0 || !isNaN(parseInt(activeArg));
                 useDetailedArgHints = true;
                 var typeStr = '';
