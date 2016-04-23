@@ -1238,8 +1238,7 @@ dom.importCssString("\
 }\
 .ace_rightAlignedText {\
     color: gray;\
-    display: none;\
-    with: 0px;\
+    display: inline-block;\
     position: absolute;\
     right: 4px;\
     text-align: right;\
@@ -1253,23 +1252,21 @@ dom.importCssString("\
     width: 280px;\
     z-index: 200000;\
     background: #fbfbfb;\
-    color: #000000;\
+    color: #444;\
     border: 1px lightgray solid;\
     position: fixed;\
     box-shadow: 2px 3px 5px rgba(0,0,0,.2);\
     line-height: 1.4;\
-    font-family: Arial;\
-    font-size: 9pt;\
 }");
 
 exports.AcePopup = AcePopup;
 
 });
 
-//ace.define("ace/autocomplete/util",["require","exports","module"], function(require, exports, module) {
-//"use strict";
+ace.define("ace/autocomplete/util",["require","exports","module"], function(require, exports, module) {
+"use strict";
 
-parForEach = function(array, fn, callback) {
+exports.parForEach = function(array, fn, callback) {
     var completed = 0;
     var arLength = array.length;
     if (arLength === 0)
@@ -1285,7 +1282,7 @@ parForEach = function(array, fn, callback) {
 
 var ID_REGEX = /[a-zA-Z_0-9\$\-\u00A2-\uFFFF]/;
 
-retrievePrecedingIdentifier = function(text, pos, regex) {
+exports.retrievePrecedingIdentifier = function(text, pos, regex) {
     regex = regex || ID_REGEX;
     var buf = [];
     for (var i = pos-1; i >= 0; i--) {
@@ -1297,7 +1294,7 @@ retrievePrecedingIdentifier = function(text, pos, regex) {
     return buf.reverse().join("");
 };
 
-retrieveFollowingIdentifier = function(text, pos, regex) {
+exports.retrieveFollowingIdentifier = function(text, pos, regex) {
     regex = regex || ID_REGEX;
     var buf = [];
     for (var i = pos; i < text.length; i++) {
@@ -1309,29 +1306,14 @@ retrieveFollowingIdentifier = function(text, pos, regex) {
     return buf;
 };
 
-
-getCompletionPrefix = function (editor) {
-    var pos = editor.getCursorPosition();
-    var line = editor.session.getLine(pos.row);
-    var prefix;
-    editor.completers.forEach(function(completer) {
-        if (completer.identifierRegexps) {
-            completer.identifierRegexps.forEach(function(identifierRegex) {
-                if (!prefix && identifierRegex)
-                    prefix = this.retrievePrecedingIdentifier(line, pos.column, identifierRegex);
-            }.bind(this));
-        }
-    }.bind(this));
-    return prefix || this.retrievePrecedingIdentifier(line, pos.column);
-};
-
+});
 
 ace.define("ace/autocomplete",["require","exports","module","ace/keyboard/hash_handler","ace/autocomplete/popup","ace/autocomplete/util","ace/lib/event","ace/lib/lang","ace/lib/dom","ace/snippets"], function(require, exports, module) {
 "use strict";
 
 var HashHandler = require("./keyboard/hash_handler").HashHandler;
 var AcePopup = require("./autocomplete/popup").AcePopup;
-//var util = require("./autocomplete/util");
+var util = require("./autocomplete/util");
 var event = require("./lib/event");
 var lang = require("./lib/lang");
 var dom = require("./lib/dom");
@@ -1515,55 +1497,26 @@ var Autocomplete = function() {
         "PageDown": function(editor) { editor.completer.popup.gotoPageDown(); }
     };
 
-    var snippetResults;
-
     this.gatherCompletions = function(editor, callback) {
         var session = editor.getSession();
         var pos = editor.getCursorPosition();
 
         var line = session.getLine(pos.row);
-        var prefix = retrievePrecedingIdentifier(line, pos.column);
-        
+        var prefix = util.retrievePrecedingIdentifier(line, pos.column);
+
         this.base = session.doc.createAnchor(pos.row, pos.column - prefix.length);
         this.base.$insertRight = true;
-
-        snippetResults = [];
 
         var matches = [];
         var total = editor.completers.length;
         editor.completers.forEach(function(completer, i) {
             completer.getCompletions(editor, session, pos, prefix, function(err, results) {
-//                if (!err)
-//                    matches = matches.concat(results);
-
-                var result;
-                var isSnippets = false;
-
                 if (!err)
-                {
-                    isSnippets = false;
-                    if (results.length > 0)
-                    {
-                        result = results[0];
-                        if (result.meta == "snippet")
-                        {
-                            snippetResults = results;
-                            isSnippets = true;
-                            return;
-                        }
-                    }
-
-                    if (isSnippets == false)
-                    {
-                        matches = matches.concat(results);
-                        matches = matches.concat(snippetResults);
-                    }
-                }
-
+                    matches = matches.concat(results);
                 var pos = editor.getCursorPosition();
                 var line = session.getLine(pos.row);
                 callback(null, {
-                    prefix: retrievePrecedingIdentifier(line, pos.column, results[0] && results[0].identifierRegex),
+                    prefix: util.retrievePrecedingIdentifier(line, pos.column, results[0] && results[0].identifierRegex),
                     matches: matches,
                     finished: (--total === 0)
                 });
@@ -1592,9 +1545,6 @@ var Autocomplete = function() {
 
         this.updateCompletions();
     };
-
-    this.isInElement = false;
-
 
     this.updateCompletions = function(keepPopupPosition) {
         if (keepPopupPosition && this.base && this.completions) {
@@ -1626,103 +1576,6 @@ var Autocomplete = function() {
                 return detachIfFinished();
             if (prefix.indexOf(results.prefix) !== 0 || _id != this.gatherCompletionsId)
                 return;
-
-            var match;
-            var isGlobal = true;
-
-            if (matches.length > 0)
-            {
-                match = matches[0];
-
-//                switch (match.value || match.caption)
-//                {
-//                    case "jQuery":
-//                    case "location":
-//                    case "Object":
-//                    case "break":
-//                    case "requ":
-//                        isGlobal = true;
-//                        break;
-//                }
-
-                if (match.isProperty == true)
-                {
-                    isGlobal = false;
-                }
-
-//                for (var i = 0; i < matches.length; i++)
-//                {
-//                    match = matches[i];
-//                    if (match.depth > 0)
-//                    {
-//                        isGlobal = false;
-//                    }
-//                }
-
-            }
-
-            if (this.isInElement == true)
-            {
-
-                if (isGlobal == true)
-                {
-                    matches = [];
-                }
-
-                for (var i = 0; i < matches.length; i++)
-                {
-                    match = matches[i];
-
-                    //if (match.depth != 0 || match.origin != "[doc]")
-                    if (match.depth != 0)
-                    {
-                        matches.splice(i, 1);
-                        i--;
-                    }
-                    else
-                    {
-                        match.value = "\"" + match.value + "\"";
-//                        match.caption = match.name;
-                    }
-                }
-
-                //this.isInElement = false;
-            }
-
-            if (isGlobal == false)
-            {
-                for (var i = 0; i < matches.length; i++)
-                {
-                    match = matches[i];
-
-                    if (match.meta == "snippet")
-                    {
-                        matches.splice(i, 1);
-                        i--;
-                    }
-                }
-            }
-            else
-            {
-                var allSnippets = true;
-
-                for (var i = 0; i < matches.length; i++)
-                {
-                    match = matches[i];
-
-                    if (match.meta != "snippet")
-                    {
-                        allSnippets = false;
-                        break;
-                    }
-                }
-
-                if (allSnippets == true)
-                {
-                    matches = [];
-                }
-            }
-            
 
             this.completions = new FilteredList(matches);
 
@@ -1822,7 +1675,6 @@ Autocomplete.startCommand = {
             editor.completer = new Autocomplete();
         editor.completer.autoInsert = false;
         editor.completer.autoSelect = true;
-        //editor.completer.isInElement = (getElementPos(editor) ? true : false);
         editor.completer.showPopup(editor);
         editor.completer.cancelContextMenu();
     },
@@ -1845,49 +1697,7 @@ var FilteredList = function(array, filterText, mutateData) {
         this.filterText = str;
         matches = this.filterCompletions(matches, this.filterText);
         matches = matches.sort(function(a, b) {
-            //return b.exactMatch - a.exactMatch || b.score - a.score;
-
-            if (b.exactMatch - a.exactMatch) return (b.exactMatch - a.exactMatch); // Found an exact match
-
-            var aIsSnippet = (a.value ? false : true);
-            var bIsSnippet = (b.value ? false : true);
-
-            var aValue = (a.value || a.caption).toLowerCase();
-            var bValue = (b.value || b.caption).toLowerCase();
-            
-//            if (a.value || b.value)
-//            {
-//                console.log("Snippet ?");
-//            }
-
-//            var aValue = a.value.toLowerCase();
-//            var bValue = b.value.toLowerCase();
-
-            if (aValue < bValue) return -1; // a < b
-            if (aValue > bValue) return 1; // a > b
-
-            if (aValue == "function")
-            {
-                if (a.value == "Function")
-                {
-                    return 1;
-                }
-                else
-                {
-                    return -1;
-                }
-            }
-
-            if (aIsSnippet == true)
-            {
-                return 1;
-            }
-            else if (bIsSnippet == true)
-            {
-                return -1;
-            }
-
-            return 0; // a = b
+            return b.exactMatch - a.exactMatch || b.score - a.score;
         });
         var prev = null;
         matches = matches.filter(function(item){
@@ -1945,12 +1755,8 @@ exports.FilteredList = FilteredList;
 
 });
 
-//ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace/lib/dom"], function (require, exports, module) {
-ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace/lib/dom","ace/autocomplete/text_completer","ace/autocomplete","ace/editor"], function (require, exports, module) {
+ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace/lib/dom"], function (require, exports, module) {
     "use strict";
-
-    var Autocomplete = require("../autocomplete").Autocomplete;
-
     var TernServer = function (options) {
         var self = this;
         this.options = options || {};
@@ -1994,7 +1800,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         this.aceTextCompletor = null;
         this.lastAutoCompleteFireTime = null;
         this.queryTimeout = 3000;
-        this.miscCodeContent = options.miscCodeContent;
         if (this.options.queryTimeout && !isNaN(parseInt(this.options.queryTimeout))) this.queryTimeout = parseInt(this.options.queryTimeout);
     };
     var Pos = function (line, ch) {
@@ -2292,16 +2097,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             }
         }
 
-        if (ts.miscCodeContent)
-        {
-            files.push({
-                type: "full",
-                name: "miscCodeContent",
-                //text: "/*Comment*/ var RmParam = {\n /*This is a comment*/ Drive: '',\n /* comment 2 */ UserId: ''\n};"
-                text: ts.miscCodeContent
-            });
-        }
-
         return {
             query: query,
             files: files,
@@ -2362,13 +2157,10 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
     function typeToIcon(type) {
         var suffix;
         if (type == "?") suffix = "unknown";
-        if (type == "object") suffix = "object";
         else if (type == "number" || type == "string" || type == "bool") suffix = type;
         else if (/^fn\(/.test(type)) suffix = "fn";
         else if (/^\[/.test(type)) suffix = "array";
-        else if (type) suffix = "object";
-        else suffix = "unknown";
-        //console.log(type);
+        else suffix = "object";
         return cls + "completion " + cls + "completion-" + suffix;
     }
     var popupSelectBound = false;
@@ -2422,16 +2214,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 if (error) {
                     return showError(ts, editor, error);
                 }
-
-                var isProperty = data.isProperty;
-                var isObjectKey = data.isObjectKey;
-
                 var ternCompletions = data.completions.map(function (item) {
-//                    if (item.name == "getOwnPropertyDescriptor")
-//                    {
-//                        console.log("getOwnPropertyDescriptor");
-//                    }
-                    
                     return {
                         iconClass: " " + (item.guess ? cls + "guess" : typeToIcon(item.type)),
                         doc: item.doc,
@@ -2439,11 +2222,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         caption: item.name,
                         value: item.name,
                         score: 99999,
-                        //meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
-                        meta: "script",
-                        depth: item.depth,
-                        origin: item.origin,
-                        isProperty: isProperty
+                        meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
                     };
                 });
                 if (debugCompletions) console.time('get and merge other completions');
@@ -2451,7 +2230,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 var otherCompletions = [];
                 if (editor.getOption('enableBasicAutocompletion') === true) {
                     try {
-                        //otherCompletions = editor.session.$mode.getCompletions();
+                        otherCompletions = editor.session.$mode.getCompletions();
                     }
                     catch (ex) {
                     }
@@ -2551,12 +2330,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         return;
                     }
                     var node = editor.completer.popup.renderer.getContainerElement();
-                    
-                    if (!node || node.getBoundingClientRect().height == 0)
-                    {
-                        return;
-                    }
-
                     tooltip = makeTooltip(node.getBoundingClientRect().right + window.pageXOffset, node.getBoundingClientRect().top + window.pageYOffset, createInfoDataTip(data, true), editor);
                     tooltip.className += " " + cls + "hint-doc";
                 }
@@ -2574,12 +2347,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
     function showType(ts, editor, pos, calledFromCursorActivity) {
         if (calledFromCursorActivity) { //check if currently in call, if so, then exit
             if (editor.completer && editor.completer.popup && editor.completer.popup.isOpen) return;
-            
-//            if (isOnArrayElement(editor))
-//            {
-//                console.log("On Array Element!");
-//            }
-
             if (!isOnFunctionCall(editor)) return;
         }
         else { //run this check here if not from cursor as this is run in isOnFunctionCall() above if from cursor
@@ -2588,8 +2355,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             }
         }
         var cb = function (error, data, typeData) {
-            closeAllTips();
-
             var tip = '';
             if (error) {
                 if (calledFromCursorActivity) {
@@ -2603,7 +2368,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             else {
                 if (calledFromCursorActivity) {
                     if (data.hasOwnProperty('guess') && data.guess === true) return; //dont show guesses on auto activity as they are not accurate
-                    if (data.type == "?" || data.type == "object" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)" || data.type == "fn()") {
+                    if (data.type == "?" || data.type == "string" || data.type == "number" || data.type == "bool" || data.type == "date" || data.type == "fn(document: ?)" || data.type == "fn()") {
                         return;
                     }
                 }
@@ -2629,7 +2394,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                     }
                 }
             }
-            
             tip = createInfoDataTip(data, true);
             setTimeout(function () {
                 var place = getCusorPosForTooltip(editor);
@@ -2668,7 +2432,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                     return null;
                 };
                 var getParamDetailedName = function (param) {
-                    var name = param.name; 
+                    var name = param.name;
                     if (param.optional === true) {
                         if (param.defaultValue) {
                             name = "[" + name + "=" + param.defaultValue + "]";
@@ -2678,22 +2442,10 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         }
                     }
                     return name;
-                }; 
+                };
                 var useDetailedArgHints = params.length === 0 || !isNaN(parseInt(activeArg));
-                useDetailedArgHints = true;
                 var typeStr = '';
-
-                if (fnArgs.rettype) {
-                    if (useDetailedArgHints) {
-                        typeStr += '<span class="' + cls + 'type">' + htmlEncode(fnArgs.rettype) + '</span> ';
-                    }
-                    else {
-                        typeStr += htmlEncode(fnArgs.rettype) + ' ';
-                    }
-                }
-
-                typeStr += htmlEncode(data.exprName || data.name || data.caption || "function");
-
+                typeStr += htmlEncode(data.exprName || data.name || "fn");
                 typeStr += "(";
                 var activeParam = null,
                     activeParamChildren = []; //one ore more child params for multiple object properties
@@ -2702,9 +2454,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                     var paramStr = '';
                     var isCurrent = !isNaN(parseInt(activeArg)) ? i === activeArg : false;
                     var arg = fnArgs.args[i]; //name,type
-                    //var name = arg.name || "?";
-                    var name = arg.name || "arg" + (i + 1).toString();
-                    //var name = arg.name || "object";
+                    var name = arg.name || "?";
                     if (name.length > 1 && name.substr(name.length - 1) === '?') {
                         name = name.substr(0, name.length - 1);
                         arg.name = name; //update the arg var with proper name for use below
@@ -2717,57 +2467,12 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         var param = getParam(arg, false);
                         var children = getParam(arg, true);
                         var type = arg.type;
-
-                        if (type.substr(0, 3) == "fn(")
-                        {
-                            var argType = parseFnType(type);
-                            var argRetTye = argType.rettype;
-                            if (argRetTye)
-                            {
-                                argRetTye += " ";
-                            }
-                            else
-                            {
-                                argRetTye = "";
-                            }
-
-                            type = argRetTye + "function(";
-                            for (var argIndex = 0; argIndex < argType.args.length; argIndex++)
-                            {
-                                var argType2 = argType.args[argIndex];
-                                type += (argType2.type == "?" ? "object" : argType2.type) + ' ' + argType2.name;
-                                if (argIndex < argType.args.length - 1)
-                                {
-                                    type += ", ";
-                                }
-                            }
-                            type += ")";
-                        }
-                        else if (type == "?")
-                        {
-                            type = "object";
-                        }
-                        else if (type == "[?]")
-                        {
-                            type = "[object]";
-                        }
-
                         var optional = false;
                         var defaultValue = '';
                         if (param !== null) {
                             name = param.name;
                             if (param.type) {
                                 type = param.type;
-
-                                if (type == "?")
-                                {
-                                    type = "object";
-                                }
-                                else if (type == "[?]")
-                                {
-                                    type = "[object]";
-                                }
-
                             }
                             if (isCurrent) {
                                 activeParam = param;
@@ -2786,17 +2491,13 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                             }
                             type += "}";
                         }
-                        //paramStr += type ? '<span class="' + cls + 'type">' + htmlEncode(type) + '</span> ' : '';
-                        paramStr += type ? '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + htmlEncode(type) + '</span> ' : '';
-                        //paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (htmlEncode(name) || "?") + '</span>';
-                        paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (htmlEncode(name) || "object") + '</span>';
+                        paramStr += type ? '<span class="' + cls + 'type">' + htmlEncode(type) + '</span> ' : '';
+                        paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (htmlEncode(name) || "?") + '</span>';
                         if (defaultValue !== '') {
-                            //paramStr += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + htmlEncode(defaultValue) + '</span>';
-                            paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">=' + htmlEncode(defaultValue) + '</span>';
+                            paramStr += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + htmlEncode(defaultValue) + '</span>';
                         }
                         if (optional) {
-                            //paramStr = '<span class="' + cls + 'jsdoc-param-optionalWrapper">' + '<span class="' + cls + 'farg-optionalBracket">[</span>' + paramStr + '<span class="' + cls + 'jsdoc-param-optionalBracket">]</span>' + '</span>';
-                            paramStr = '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">[</span>' + paramStr + '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">]</span>';
+                            paramStr = '<span class="' + cls + 'jsdoc-param-optionalWrapper">' + '<span class="' + cls + 'farg-optionalBracket">[</span>' + paramStr + '<span class="' + cls + 'jsdoc-param-optionalBracket">]</span>' + '</span>';
                         }
                     }
                     if (i > 0) paramStr = ', ' + paramStr;
@@ -2804,15 +2505,14 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 }
 
                 typeStr += ")";
-//                if (fnArgs.rettype) {
-//                    if (useDetailedArgHints) {
-//                        typeStr += ' -> <span class="' + cls + 'type">' + htmlEncode(fnArgs.rettype) + '</span>';
-//                    }
-//                    else {
-//                        typeStr += ' -> ' + htmlEncode(fnArgs.rettype);
-//                    }
-//                }
-
+                if (fnArgs.rettype) {
+                    if (useDetailedArgHints) {
+                        typeStr += ' -> <span class="' + cls + 'type">' + htmlEncode(fnArgs.rettype) + '</span>';
+                    }
+                    else {
+                        typeStr += ' -> ' + htmlEncode(fnArgs.rettype);
+                    }
+                }
                 typeStr = '<span class="' + cls + (useDetailedArgHints ? "typeHeader" : "typeHeader-simple") + '">' + typeStr + '</span>'; //outer wrapper
                 if (useDetailedArgHints) {
                     if (activeParam && activeParam.description) {
@@ -2820,8 +2520,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                     }
                     if (activeParamChildren && activeParamChildren.length > 0) {
                         for (var i = 0; i < activeParamChildren.length; i++) {
-                            //var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
-                            var t = activeParamChildren[i].type ? '<span class="' + cls + 'jsdoc-type">' + activeParamChildren[i].type + ' </span>' : '';
+                            var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
                             typeStr += '<div class="' + cls + 'farg-current-description">' + t + '<span class="' + cls + 'farg-current-name">' + getParamDetailedName(activeParamChildren[i]) + ': </span>' + activeParamChildren[i].description + '</div>';
                         }
                     }
@@ -2829,9 +2528,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 tip.appendChild(elFromString(typeStr));
             }
         }
-        
-        //if (isNaN(parseInt(activeArg)))
-        {
+        if (isNaN(parseInt(activeArg))) {
             if (data.doc) {
                 var replaceParams = function (str, params) {
                     if (params.length === 0) {
@@ -2857,9 +2554,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         else {
                             paramStr += '<span class="' + cls + 'jsdoc-tag-param-child">&nbsp;</span> '; //dont show param tag for child param
                         }
-                        
-                        //paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'type">{' + params[i].type + '}</span> ';
-                        paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'jsdoc-type">' + params[i].type + '</span> ';
+                        paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'type">{' + params[i].type + '}</span> ';
 
                         if (params[i].name.trim() !== '') {
                             var name = params[i].name.trim();
@@ -2910,7 +2605,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                             if (m.index === re.lastIndex) {
                                 re.lastIndex++;
                             }
-                            str = str.replace(m[0], ' <span class="' + cls + 'jsdoc-type">' + m[0].trim() + '</span> ');
+                            str = str.replace(m[0], ' <span class="' + cls + 'type">' + m[0].trim() + '</span> ');
                         }
                     }
                     catch (ex) {
@@ -2948,21 +2643,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 d = highlighTags(d);
                 d = highlightTypes(d);
                 d = createLinks(d);
-
-                var dHtml = '@returns</span> <span class="' + cls + 'jsdoc-type">';
-                var index = d.indexOf(dHtml);
-                var dType = "";
-                if (index > -1)
-                {
-                    var index3 = d.indexOf("{", index);
-                    var index2 = d.indexOf("}", index);
-                    if (index2 > index)
-                    {
-                        dType = d.substring((index3 + 1), index2);
-                        d = d.replace(dHtml + "{" + dType + "}", dHtml + dType);
-                    }
-                }
-
                 tip.appendChild(elFromString(d));
             }
             if (data.url) {
@@ -2973,7 +2653,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 tip.appendChild(link);
             }
             if (data.origin) {
-                //tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
+                tip.appendChild(elt("div", null, elt("em", null, "source: " + data.origin)));
             }
         }
         return tip;
@@ -3264,7 +2944,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             cb(result);
         }
     }
-
     function isOnFunctionCall(editor) {
         if (!inJavascriptMode(editor)) return false;
         if (somethingIsSelected(editor)) return false;
@@ -3280,23 +2959,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
 
         return true;
     }
-
-    function isOnArrayElement(editor) {
-        if (!inJavascriptMode(editor)) return false;
-        if (somethingIsSelected(editor)) return false;
-        if (isInElement(editor)) return false;
-
-        var tok = getCurrentToken(editor);
-        if (!tok) return; //No token at current location
-        if (!tok.start) return; //sometimes this is missing... not sure why but makes it impossible to do what we want
-        if (tok.type.indexOf('entity.name.function') !== -1) return false; //function definition
-        if (tok.type.indexOf('storage.type') !== -1) return false; // could be 'function', which is start of an anon fn
-        var nextTok = editor.session.getTokenAt(editor.getSelectionRange().end.row, (tok.start + tok.value.length + 1));
-        if (!nextTok || nextTok.value !== "(") return false;
-
-        return true;
-    }
-
     function somethingIsSelected(editor) {
         return editor.getSession().getTextRange(editor.getSelectionRange()) !== '';
     }
@@ -3319,7 +2981,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             showError(ts, editor, ex);
         }
     }
-
     function getCallPos(editor, pos) {
         if (somethingIsSelected(editor)) return;
         if (!inJavascriptMode(editor)) return;
@@ -3347,7 +3008,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         depth -= 1;
                     }
                     else if (ch === '(') {
-                    //else if (ch === '(' || ch === '[') {
                         var debugFnCall = false;
                         var upToParen = thisRow.substr(0, col);
                         if (!upToParen.length) {
@@ -3406,104 +3066,9 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             "argpos": argpos
         };
     }
-    
     function isInCall(editor, pos) {
         var callPos = getCallPos(editor, pos);
         if (callPos) {
-            return true;
-        }
-        return false;
-    }
-
-    function getElementPos(editor, pos) {
-        if (somethingIsSelected(editor)) return;
-        if (!inJavascriptMode(editor)) return;
-        var start = {}; //start of query to tern (start of the call location)
-        var currentPosistion = pos || editor.getSelectionRange().start; //{row,column}
-        currentPosistion = toAceLoc(currentPosistion); //just in case
-        var currentLine = currentPosistion.row;
-        var currentCol = currentPosistion.column;
-        var firstLineToCheck = Math.max(0, currentLine - 6);
-        var ch = '';
-        var depth = 0;
-        var commas = [];
-        for (var row = currentLine; row >= firstLineToCheck; row--) {
-            var thisRow = editor.session.getLine(row);
-            if (row === currentLine) {
-                thisRow = thisRow.substr(0, currentCol);
-            }
-            for (var col = thisRow.length; col >= 0; col--) {
-                ch = thisRow.substr(col, 1);
-                if (ch === '}' || ch === ')' || ch === ']') {
-                    depth += 1;
-                }
-                else if (ch === '{' || ch === '(' || ch === '[') {
-                    if (depth > 0) {
-                        depth -= 1;
-                    }
-                    else if (ch === '[') {
-                        var debugElement = false;
-                        var upToParen = thisRow.substr(0, col);
-                        if (!upToParen.length) {
-                            if (debugElement) console.log('not element because before parent is empty');
-                            break;
-                        }
-                        if (upToParen.substr(upToParen.length - 1) === ' ') {
-                            if (debugElement) console.log('not element because there is a space before paren');
-                            break;
-                        }
-                        var wordBeforeFnName = upToParen.split(' ').reverse()[1];
-                        if (wordBeforeFnName && wordBeforeFnName.toLowerCase() === 'function') {
-                            if (debugElement) console.log('not element because this is a function declaration');
-                            break;
-                        }
-                        var token = editor.session.getTokenAt(row, col);
-                        if (token) {
-                            if (token.type.toString().indexOf('comment') !== -1 || token.type === 'keyword' || token.type === 'storage.type') {
-                                if (debugElement) console.log('existing because token is comment, keyword, or storage.type (`function`)');
-                                break;
-                            }
-                        }
-
-                        if (debugElement) console.info('getting arg hints!');
-                        start = {
-                            line: row,
-                            ch: col
-                        };
-                        break;
-                    }
-                    else {
-                        break;
-                    }
-                }
-                else if (ch === ',' && depth === 0) {
-                    commas.push({
-                        line: row,
-                        ch: col
-                    });
-                }
-            }
-
-        }
-
-        if (!start.hasOwnProperty('line')) return; //start not found
-        var argpos = 0;
-        for (var i = 0; i < commas.length; i++) {
-            var p = commas[i];
-            if ((p.line === start.line && p.ch > start.ch) || (p.line > start.line)) {
-                argpos += 1;
-            }
-        }
-
-        return {
-            start: toTernLoc(start),
-            "argpos": argpos
-        };
-    }
-
-    function isInElement(editor, pos) {
-        var elementPos = getElementPos(editor, pos);
-        if (elementPos) {
             return true;
         }
         return false;
@@ -3513,27 +3078,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
     function updateArgHints(ts, editor) {
         clearTimeout(debounce_updateArgHints);
         closeArgHints(ts);
-        
-        var elementPos = getElementPos(editor);
-        if (elementPos)
-        {
-            //console.log("In array element!");
-
-            if (!editor.completer)
-            {
-                Autocomplete.startCommand.exec(editor);
-            }
-            editor.completer.isInElement = true;
-            editor.completer.showPopup(editor);
-            editor.completer.cancelContextMenu();
-            return;
-        }
-
-        if (editor.completer)
-        {
-            editor.completer.isInElement = false;
-        }
-        
         var callPos = getCallPos(editor);
         if (!callPos) {
             return;
@@ -3573,12 +3117,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
     }
     function showArgHints(ts, editor, pos) {
         closeArgHints(ts);
-
-        if (editor.completer.popup.isOpen == true)
-        {
-            return;
-        }
-
         var cache = ts.cachedArgHints,
             tp = cache.type,
             comments = cache.comments; //added by morgan to include document comments
@@ -3643,24 +3181,6 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             }
 
         var rettype = text.slice(pos).match(/^\) -> (.*)$/);
-        
-        if (rettype == "?")
-        {
-            rettype = "object";
-        } 
-        else if (rettype == "[?]")
-        {
-            rettype = "[object]";
-        } 
-        else if (rettype == "fn()")
-        {
-            rettype = "function";
-        }
-        else if (Array.isArray(rettype) && rettype[1] == "fn()")
-        {
-            rettype[1] = "function";
-        }
-
         return {
             args: args,
             rettype: rettype && rettype[1]
@@ -4241,52 +3761,8 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             });
         };
     }
-
-
     var dom = require("ace/lib/dom");
-    //dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 50em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; text-decoration:underline; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:black; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } .Ace-Tern-tooltip-link{font-size:smaller; color:blue;} .ace_autocomplete {width: 400px !important;}", "ace_tern");
-    //".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #000000; padding: 2px 5px; padding-right:15px; font-size: 9pt; font-family: Tahoma; background-color: #ffffc0; white-space: pre-wrap; max-width: 50em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } "
-    dom.importCssString(
-        ".Ace-Tern-tooltip { padding: 2px 5px; padding-right:15px; font-size: 9pt; font-family: Tahoma; background-color: #ffffc0; white-space: pre-wrap; max-width: 50em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; background-color: rgb(255, 255, 255); background-image: linear-gradient(transparent, rgba(0, 0, 0, 0.0980392)); border-bottom-color: rgb(128, 128, 128); border-bottom-left-radius: 1px; border-bottom-right-radius: 1px; border-bottom-style: solid; border-bottom-width: 1px; border-image-outset: 0px; border-image-repeat: stretch; border-image-slice: 100%; border-image-source: none; border-image-width: 1; border-left-color: rgb(128, 128, 128); border-left-style: solid; border-left-width: 1px; border-right-color: rgb(128, 128, 128); border-right-style: solid; border-right-width: 1px; border-top-color: rgb(128, 128, 128); border-top-left-radius: 1px; border-top-right-radius: 1px; border-top-style: solid; border-top-width: 1px; box-shadow: rgba(0, 0, 0, 0.298039) 0px 1px 2px 0px; box-sizing: border-box; color: rgb(0, 0, 0); } "
-        + ".Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; display: none; } "
-        + ".Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } "
-        + ".Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } "
-        + ".Ace-Tern-completion { padding-left: 16px; position: relative; } " 
-        + ".Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; font-weight: bold; height: 16px; width: 16px; font-size:11px; line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } "
-        + ".Ace-Tern-completion-unknown:before { content:''; background-image: url('./ace-builds/src-noconflict/images/keyword.png'); } "
-        + ".Ace-Tern-completion-object:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
-        + ".Ace-Tern-completion-fn:before { content:''; background-image: url('./ace-builds/src-noconflict/images/method.png'); } "
-        + ".Ace-Tern-completion-array:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
-        + ".Ace-Tern-completion-number:before {content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
-        + ".Ace-Tern-completion-string:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
-        + ".Ace-Tern-completion-bool:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
-        + ".Ace-Tern-completion-snippet:before { content:''; background-image: url('./ace-builds/src-noconflict/images/snippet.png'); } "
-        + ".Ace-Tern-completion-guess { color: #999; } "
-        + ".Ace-Tern-hint-doc { max-width: 35em; } "
-        + ".Ace-Tern-fhint-guess { opacity: .7; } "
-        + ".Ace-Tern-fname { color: black; } "
-        + ".Ace-Tern-farg { } "
-        + ".Ace-Tern-farg-current { font-weight:bold; } "
-        + ".Ace-Tern-farg-current-description { margin-top:2px; color:black; } "
-        + ".Ace-Tern-farg-current-name { font-weight:bold; } "
-        + ".Ace-Tern-type { } "
-        + ".Ace-Tern-jsdoc-type { font-weight:bold; } "
-        + ".Ace-Tern-jsdoc-tag { text-transform: lowercase; font-weight:bold; } "
-        + ".Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } "
-        + ".Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } "
-        + ".Ace-Tern-jsdoc-param-optionalWrapper { } "
-        + ".Ace-Tern-jsdoc-param-optionalBracket { color:#000000; } "
-        + ".Ace-Tern-jsdoc-param-name { color: #000000; font-weight:bold; } "
-        + ".Ace-Tern-jsdoc-param-defaultValue { color:#000000; } "
-        + ".Ace-Tern-jsdoc-param-description { color:black; } "
-        + ".Ace-Tern-typeHeader-simple{ display:block; margin-bottom:3px; color:#000000; } "
-        + ".Ace-Tern-typeHeader{ display:block; margin-bottom:3px; } "
-        + ".Ace-Tern-tooltip-link{font-size:smaller; color:blue;} "
-        + ".ace_autocomplete {width: 250px !important;}"
-        + ".Ace-Tern-farg-optionalBracket { font-weight: bold; }"
-        + ".Ace-Tern-jsdoc-param-optionalBracket { font-weight: bold; }"
-        + ".Ace-Tern-jsdoc-param-defaultValue { font-weight: bold; }", 
-        "ace_tern");
+    dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 50em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; text-decoration:underline; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:black; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } .Ace-Tern-tooltip-link{font-size:smaller; color:blue;} .ace_autocomplete {width: 400px !important;}", "ace_tern");
 
 });
 
@@ -4294,9 +3770,6 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
     "use strict";
     var config = require("../config");
     var snippetManager = require("../snippets").snippetManager;
-    
-    var cls = "Ace-Tern-";
-
     var snippetCompleter = {
         getCompletions: function (editor, session, pos, prefix, callback) {
             var snippetMap = snippetManager.snippetMap;
@@ -4310,11 +3783,7 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
                     completions.push({
                         caption: caption,
                         snippet: s.content,
-                        meta: s.tabTrigger && !s.name ? s.tabTrigger + "\u21E5 " : "snippet",
-                        iconClass: " " + cls + "completion " + cls + "completion-snippet",
-                        origin: "snippet",
-                        value: caption,
-                        isProperty: false
+                        meta: s.tabTrigger && !s.name ? s.tabTrigger + "\u21E5 " : "snippet"
                     });
                 }
             }, this);
@@ -4329,8 +3798,7 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
             callback(null, completions);
         }
     };
-    //var completers = [snippetCompleter, textCompleter, keyWordCompleter];
-    var completers = [];
+    var completers = [snippetCompleter, textCompleter, keyWordCompleter];
     exports.setCompleters = function (val) {
         completers = val || [];
     };
@@ -4381,63 +3849,40 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
         });
     };
 
-//    function getCompletionPrefix(editor) {
-//        var pos = editor.getCursorPosition();
-//        var line = editor.session.getLine(pos.row);
-//        var prefix;
-//        editor.completers.forEach(function (completer) {
-//            if (completer.identifierRegexps) {
-//                completer.identifierRegexps.forEach(function (identifierRegex) {
-//                    if (!prefix && identifierRegex)
-//                        prefix = util.retrievePrecedingIdentifier(line, pos.column, identifierRegex);
-//                });
-//            }
-//        });
-//        return prefix || util.retrievePrecedingIdentifier(line, pos.column);
-//    }
-
-//    var doLiveAutocomplete = function (e) {
-//        var editor = e.editor;
-//        var text = e.args || "";
-//        var hasCompleter = editor.completer && editor.completer.activated;
-//        if (e.command.name === "backspace") {
-//            if (hasCompleter && !getCompletionPrefix(editor))
-//                editor.completer.detach();
-//        }
-//        else if (e.command.name === "insertstring") {
-//            var prefix = getCompletionPrefix(editor);
-//            if (prefix && !hasCompleter) {
-//                if (!editor.completer) {
-//                    editor.completer = new Autocomplete();
-//                }
-//                editor.completer.autoInsert = false;
-//                editor.completer.showPopup(editor);
-//            }
-//        }
-//    };
-
-var doLiveAutocomplete = function(e) {
-    var editor = e.editor;    
-    var hasCompleter = editor.completer && editor.completer.activated;
-    if (e.command.name === "backspace") {
-        if (hasCompleter && !getCompletionPrefix(editor))
-            editor.completer.detach();
-    }
-    else if (e.command.name === "insertstring") {
-        var prefix = getCompletionPrefix(editor);
-        if (prefix && !hasCompleter) {
-            if (!editor.completer) {
-                //editor.completer = new Autocomplete();
-                Autocomplete.startCommand.exec(editor);
+    function getCompletionPrefix(editor) {
+        var pos = editor.getCursorPosition();
+        var line = editor.session.getLine(pos.row);
+        var prefix;
+        editor.completers.forEach(function (completer) {
+            if (completer.identifierRegexps) {
+                completer.identifierRegexps.forEach(function (identifierRegex) {
+                    if (!prefix && identifierRegex)
+                        prefix = util.retrievePrecedingIdentifier(line, pos.column, identifierRegex);
+                });
             }
-            editor.completer.autoInsert = false;
-            //editor.completer.isInElement = (getElementPos(editor) ? true : false);
-            editor.completer.showPopup(editor);
-        }
+        });
+        return prefix || util.retrievePrecedingIdentifier(line, pos.column);
     }
-};
 
-
+    var doLiveAutocomplete = function (e) {
+        var editor = e.editor;
+        var text = e.args || "";
+        var hasCompleter = editor.completer && editor.completer.activated;
+        if (e.command.name === "backspace") {
+            if (hasCompleter && !getCompletionPrefix(editor))
+                editor.completer.detach();
+        }
+        else if (e.command.name === "insertstring") {
+            var prefix = getCompletionPrefix(editor);
+            if (prefix && !hasCompleter) {
+                if (!editor.completer) {
+                    editor.completer = new Autocomplete();
+                }
+                editor.completer.autoInsert = false;
+                editor.completer.showPopup(editor);
+            }
+        }
+    };
     var Autocomplete = require("../autocomplete").Autocomplete;
     Autocomplete.startCommand = {
         name: "startAutocomplete",
@@ -4447,31 +3892,25 @@ var doLiveAutocomplete = function(e) {
             }
             editor.completers = [];
             if (editor.$enableSnippets) { //snippets are allowed with or without tern
-                //editor.completers.push(snippetCompleter);
+                editor.completers.push(snippetCompleter);
             }
-            
+
             if (editor.ternServer && editor.$enableTern) {
                 if (editor.ternServer.enabledAtCurrentLocation(editor)) {
                     editor.completers.push(editor.ternServer);
-                    //editor.ternServer.aceTextCompletor = textCompleter; //9.30.2014- give tern the text completor
-
-                    if (editor.$enableSnippets) { //snippets are allowed with or without tern
-                        editor.completers.push(snippetCompleter);
-                    }
-
+                    editor.ternServer.aceTextCompletor = textCompleter; //9.30.2014- give tern the text completor
                 }
                 else {
                     if (editor.$enableBasicAutocompletion) {
-//                        editor.completers.push(textCompleter, keyWordCompleter);
+                        editor.completers.push(textCompleter, keyWordCompleter);
                     }
                 }
             }
             else { //tern not enabled
                 if (editor.$enableBasicAutocompletion) {
-//                    editor.completers.push(textCompleter, keyWordCompleter);
+                    editor.completers.push(textCompleter, keyWordCompleter);
                 }
             }
-            //editor.completer.isInElement = (getElementPos(editor) ? true : false);
             editor.completer.showPopup(editor);
             editor.completer.cancelContextMenu();
         },
@@ -4531,7 +3970,7 @@ var doLiveAutocomplete = function(e) {
         }
     };
 
-    //completers.push(aceTs);
+    completers.push(aceTs);
     exports.server = aceTs;
 
     var Editor = require("../editor").Editor;
@@ -4610,6 +4049,26 @@ var doLiveAutocomplete = function(e) {
     });
 });
 
+var doLiveAutocomplete = function(e) {
+    var editor = e.editor;
+    var hasCompleter = editor.completer && editor.completer.activated;
+    if (e.command.name === "backspace") {
+        if (hasCompleter && !util.getCompletionPrefix(editor))
+            editor.completer.detach();
+    }
+    else if (e.command.name === "insertstring") {
+        var prefix = util.getCompletionPrefix(editor);
+        if (prefix && !hasCompleter) {
+            if (!editor.completer) {
+                editor.completer = new Autocomplete();
+            }
+            editor.completer.autoInsert = false;
+            editor.completer.showPopup(editor);
+        }
+    }
+};
+
                 (function() {
                     ace.require(["ace/tern/tern"], function() {});
                 })();
+            

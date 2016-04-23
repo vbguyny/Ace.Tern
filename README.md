@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 [Live Demo] (http://vbguyny.github.io/Ace.Tern/demo.html) 
+=======
+[Live Demo] (http://vbguyny.github.io/Ace.Tern/demo.html)
+>>>>>>> refs/remotes/origin/master
 ========
 
 Ace.Tern
