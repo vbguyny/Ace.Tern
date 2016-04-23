@@ -932,14 +932,22 @@ ace.define("ace/autocomplete/text_completer",["require","exports","module","ace/
     }
 
     exports.getCompletions = function(editor, session, pos, prefix, callback) {
+        var cls = "Ace-Tern-";
         var wordScore = wordDistance(session, pos, prefix);
         var wordList = Object.keys(wordScore);
+        
+        return;
+
         callback(null, wordList.map(function(word) {
             return {
                 caption: word,
                 value: word,
                 score: wordScore[word],
-                meta: "local"
+                meta: "local",
+                iconClass: " " + cls + "completion " + cls + "completion-local",
+                origin: "local",
+                value: word,
+                isProperty: false
             };
         }));
     };
@@ -1529,6 +1537,8 @@ var Autocomplete = function() {
 
         snippetResults = [];
 
+        var isJSMode = inJavascriptMode(editor);
+
         var matches = [];
         var total = editor.completers.length;
         editor.completers.forEach(function(completer, i) {
@@ -1537,7 +1547,9 @@ var Autocomplete = function() {
 //                    matches = matches.concat(results);
 
                 var result;
+                var match;
                 var isSnippets = false;
+                var isGlobal = true;
 
                 if (!err)
                 {
@@ -1549,15 +1561,40 @@ var Autocomplete = function() {
                         {
                             snippetResults = results;
                             isSnippets = true;
-                            return;
+                            if (isJSMode == true)
+                            {
+                                return;
+                            }
                         }
                     }
 
                     if (isSnippets == false)
                     {
                         matches = matches.concat(results);
+                        //matches = matches.concat(snippetResults);
+
+                        if (matches.length > 0)
+                        {
+                            match = matches[0];
+                            if (match.isProperty == true)
+                            {
+                                isGlobal = false;
+                            }
+
+                            if (isGlobal == true)
+                            {
+                                matches = matches.concat(snippetResults);
+                                snippetResults = [];
+                            }
+                        }
+
+                    }
+                    else if (matches.length == 0)
+                    {
                         matches = matches.concat(snippetResults);
                     }
+
+
                 }
 
                 var pos = editor.getCursorPosition();
@@ -1571,6 +1608,28 @@ var Autocomplete = function() {
         });
         return true;
     };
+
+    function inJavascriptMode(editor) {
+        return getCurrentMode(editor) == 'javascript';
+    }
+    function getCurrentMode(editor) {
+        var scope = editor.session.$mode.$id || "";
+        scope = scope.split("/").pop();
+        if (scope === "html" || scope === "php") {
+            if (scope === "php") scope = "html";
+            var c = editor.getCursorPosition();
+            var state = editor.session.getState(c.row);
+            if (typeof state === "object") {
+                state = state[0];
+            }
+            if (state.substring) {
+                if (state.substring(0, 3) == "js-") scope = "javascript";
+                else if (state.substring(0, 4) == "css-") scope = "css";
+                else if (state.substring(0, 4) == "php-") scope = "php";
+            }
+        }
+        return scope;
+    }
 
     this.showPopup = function(editor) {
         if (this.editor)
@@ -1689,39 +1748,39 @@ var Autocomplete = function() {
                 //this.isInElement = false;
             }
 
-            if (isGlobal == false)
-            {
-                for (var i = 0; i < matches.length; i++)
-                {
-                    match = matches[i];
+//            if (isGlobal == false)
+//            {
+//                for (var i = 0; i < matches.length; i++)
+//                {
+//                    match = matches[i];
 
-                    if (match.meta == "snippet")
-                    {
-                        matches.splice(i, 1);
-                        i--;
-                    }
-                }
-            }
-            else
-            {
-                var allSnippets = true;
+//                    if (match.meta == "snippet")
+//                    {
+//                        matches.splice(i, 1);
+//                        i--;
+//                    }
+//                }
+//            }
+//            else
+//            {
+//                var allSnippets = true;
 
-                for (var i = 0; i < matches.length; i++)
-                {
-                    match = matches[i];
+//                for (var i = 0; i < matches.length; i++)
+//                {
+//                    match = matches[i];
 
-                    if (match.meta != "snippet")
-                    {
-                        allSnippets = false;
-                        break;
-                    }
-                }
+//                    if (match.meta != "snippet")
+//                    {
+//                        allSnippets = false;
+//                        break;
+//                    }
+//                }
 
-                if (allSnippets == true)
-                {
-                    matches = [];
-                }
-            }
+//                if (allSnippets == true)
+//                {
+//                    matches = [];
+//                }
+//            }
             
 
             this.completions = new FilteredList(matches);
@@ -4260,7 +4319,11 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         + ".Ace-Tern-completion-number:before {content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
         + ".Ace-Tern-completion-string:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
         + ".Ace-Tern-completion-bool:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
-        + ".Ace-Tern-completion-snippet:before { content:''; background-image: url('./ace-builds/src-noconflict/images/snippet.png'); } "
+        + ".Ace-Tern-completion-snippet:before { content:''; background-image: url('./ace-builds/src-noconflict/images/snippet2.png'); } "
+        + ".Ace-Tern-completion-local:before { content:''; background-image: url('./ace-builds/src-noconflict/images/constant.png'); } "
+        + ".Ace-Tern-completion-tag:before { content:''; background-image: url('./ace-builds/src-noconflict/images/tag.png'); } "
+        + ".Ace-Tern-completion-attribute:before { content:''; background-image: url('./ace-builds/src-noconflict/images/attribute.png'); } "
+        + ".Ace-Tern-completion-keyword:before { content:''; background-image: url('./ace-builds/src-noconflict/images/keyword.png'); } "
         + ".Ace-Tern-completion-guess { color: #999; } "
         + ".Ace-Tern-hint-doc { max-width: 35em; } "
         + ".Ace-Tern-fhint-guess { opacity: .7; } "
@@ -4326,6 +4389,27 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
         getCompletions: function (editor, session, pos, prefix, callback) {
             var state = editor.session.getState(pos.row);
             var completions = session.$mode.getCompletions(state, session, pos, prefix);
+
+            var completion;
+            var index;
+            for (index = 0; index < completions.length; index++)
+            {
+                completion = completions[index];
+                completion.iconClass = " " + cls + "completion " + cls + "completion-" + completion.meta;
+                completion.origin = completion.meta;
+                //completion.isProperty = (completion.meta == "attribute");
+                completion.isProperty = true;
+
+                if (completion.value)
+                {
+                    completion.caption = completion.value;
+                }
+                else
+                {
+                    completion.value = completion.caption;
+                }
+            }
+
             callback(null, completions);
         }
     };
@@ -4458,17 +4542,29 @@ var doLiveAutocomplete = function(e) {
                     if (editor.$enableSnippets) { //snippets are allowed with or without tern
                         editor.completers.push(snippetCompleter);
                     }
+                    if (editor.$enableBasicAutocompletion) {
+                        //editor.completers.push(textCompleter, keyWordCompleter);
+                    }
 
                 }
                 else {
                     if (editor.$enableBasicAutocompletion) {
-//                        editor.completers.push(textCompleter, keyWordCompleter);
+                        editor.completers.push(textCompleter, keyWordCompleter);
                     }
+
+                    if (editor.$enableSnippets) { //snippets are allowed with or without tern
+                        editor.completers.push(snippetCompleter);
+                    }
+
                 }
             }
             else { //tern not enabled
                 if (editor.$enableBasicAutocompletion) {
-//                    editor.completers.push(textCompleter, keyWordCompleter);
+                    editor.completers.push(textCompleter, keyWordCompleter);
+                }
+
+                if (editor.$enableSnippets) { //snippets are allowed with or without tern
+                    editor.completers.push(snippetCompleter);
                 }
             }
             //editor.completer.isInElement = (getElementPos(editor) ? true : false);
@@ -4514,19 +4610,43 @@ var doLiveAutocomplete = function(e) {
         }, 10);
     };
     var onAfterExec_Tern = function (e, commandManager) {
-        if (e.command.name === "insertstring" && e.args === ".") {
-            if (e.editor.ternServer && e.editor.ternServer.enabledAtCurrentLocation(e.editor)) {
-                var pos = e.editor.getSelectionRange().end;
-                var tok = e.editor.session.getTokenAt(pos.row, pos.column);
-                if (tok) {
-                    if (tok.type !== 'string' && tok.type.toString().indexOf('comment') === -1) {
-                        try {
-                            e.editor.ternServer.lastAutoCompleteFireTime = null; //reset since this was not triggered by user firing command but triggered automatically
+        //if (e.command.name === "insertstring" && e.args === ".") {
+        if (e.command.name === "insertstring")
+        {
+            switch (e.args)
+            {
+                case ".":
+                    if (e.editor.ternServer && e.editor.ternServer.enabledAtCurrentLocation(e.editor)) {
+                        var pos = e.editor.getSelectionRange().end;
+                        var tok = e.editor.session.getTokenAt(pos.row, pos.column);
+                        if (tok) {
+                            if (tok.type !== 'string' && tok.type.toString().indexOf('comment') === -1) {
+                                try {
+                                    e.editor.ternServer.lastAutoCompleteFireTime = null; //reset since this was not triggered by user firing command but triggered automatically
+                                }
+                                catch (ex) {}
+                                e.editor.execCommand("startAutocomplete");
+                            }
                         }
-                        catch (ex) {}
-                        e.editor.execCommand("startAutocomplete");
                     }
-                }
+                    break;
+
+                case "<":
+                    if (e.editor.ternServer && e.editor.ternServer.enabledAtCurrentLocation(e.editor) == false) {
+                        var pos = e.editor.getSelectionRange().end;
+                        var tok = e.editor.session.getTokenAt(pos.row, pos.column);
+                        if (tok) {
+                            if (tok.type !== 'string' && tok.type.toString().indexOf('comment') === -1) {
+                                try {
+                                    e.editor.ternServer.lastAutoCompleteFireTime = null; //reset since this was not triggered by user firing command but triggered automatically
+                                }
+                                catch (ex) {}
+                                e.editor.execCommand("startAutocomplete");
+                            }
+                        }
+                    }
+                    break;
+
             }
         }
     };
