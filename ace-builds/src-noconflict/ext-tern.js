@@ -1628,7 +1628,7 @@ var Autocomplete = function() {
                 return;
 
             var match;
-            var isGlobal = false;
+            var isGlobal = true;
 
             if (matches.length > 0)
             {
@@ -1645,9 +1645,9 @@ var Autocomplete = function() {
 //                        break;
 //                }
 
-                if (match.origin != "[doc]")
+                if (match.isProperty == true)
                 {
-                    isGlobal = true;
+                    isGlobal = false;
                 }
 
 //                for (var i = 0; i < matches.length; i++)
@@ -1702,6 +1702,27 @@ var Autocomplete = function() {
                     }
                 }
             }
+            else
+            {
+                var allSnippets = true;
+
+                for (var i = 0; i < matches.length; i++)
+                {
+                    match = matches[i];
+
+                    if (match.meta != "snippet")
+                    {
+                        allSnippets = false;
+                        break;
+                    }
+                }
+
+                if (allSnippets == true)
+                {
+                    matches = [];
+                }
+            }
+            
 
             this.completions = new FilteredList(matches);
 
@@ -2401,6 +2422,10 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 if (error) {
                     return showError(ts, editor, error);
                 }
+
+                var isProperty = data.isProperty;
+                var isObjectKey = data.isObjectKey;
+
                 var ternCompletions = data.completions.map(function (item) {
 //                    if (item.name == "getOwnPropertyDescriptor")
 //                    {
@@ -2417,7 +2442,8 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         //meta: item.origin ? item.origin.replace(/^.*[\\\/]/, '') : "tern"
                         meta: "script",
                         depth: item.depth,
-                        origin: item.origin
+                        origin: item.origin,
+                        isProperty: isProperty
                     };
                 });
                 if (debugCompletions) console.time('get and merge other completions');
@@ -2765,10 +2791,12 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         //paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (htmlEncode(name) || "?") + '</span>';
                         paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">' + (htmlEncode(name) || "object") + '</span>';
                         if (defaultValue !== '') {
-                            paramStr += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + htmlEncode(defaultValue) + '</span>';
+                            //paramStr += '<span class="' + cls + 'jsdoc-param-defaultValue">=' + htmlEncode(defaultValue) + '</span>';
+                            paramStr += '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">=' + htmlEncode(defaultValue) + '</span>';
                         }
                         if (optional) {
-                            paramStr = '<span class="' + cls + 'jsdoc-param-optionalWrapper">' + '<span class="' + cls + 'farg-optionalBracket">[</span>' + paramStr + '<span class="' + cls + 'jsdoc-param-optionalBracket">]</span>' + '</span>';
+                            //paramStr = '<span class="' + cls + 'jsdoc-param-optionalWrapper">' + '<span class="' + cls + 'farg-optionalBracket">[</span>' + paramStr + '<span class="' + cls + 'jsdoc-param-optionalBracket">]</span>' + '</span>';
+                            paramStr = '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">[</span>' + paramStr + '<span class="' + cls + (isCurrent ? "farg-current" : "farg") + '">]</span>';
                         }
                     }
                     if (i > 0) paramStr = ', ' + paramStr;
@@ -2792,7 +2820,8 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                     }
                     if (activeParamChildren && activeParamChildren.length > 0) {
                         for (var i = 0; i < activeParamChildren.length; i++) {
-                            var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
+                            //var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
+                            var t = activeParamChildren[i].type ? '<span class="' + cls + 'jsdoc-type">' + activeParamChildren[i].type + ' </span>' : '';
                             typeStr += '<div class="' + cls + 'farg-current-description">' + t + '<span class="' + cls + 'farg-current-name">' + getParamDetailedName(activeParamChildren[i]) + ': </span>' + activeParamChildren[i].description + '</div>';
                         }
                     }
@@ -2828,7 +2857,9 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         else {
                             paramStr += '<span class="' + cls + 'jsdoc-tag-param-child">&nbsp;</span> '; //dont show param tag for child param
                         }
-                        paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'type">{' + params[i].type + '}</span> ';
+                        
+                        //paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'type">{' + params[i].type + '}</span> ';
+                        paramStr += params[i].type.trim() === '' ? '' : '<span class="' + cls + 'jsdoc-type">' + params[i].type + '</span> ';
 
                         if (params[i].name.trim() !== '') {
                             var name = params[i].name.trim();
@@ -2879,7 +2910,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                             if (m.index === re.lastIndex) {
                                 re.lastIndex++;
                             }
-                            str = str.replace(m[0], ' <span class="' + cls + 'type">' + m[0].trim() + '</span> ');
+                            str = str.replace(m[0], ' <span class="' + cls + 'jsdoc-type">' + m[0].trim() + '</span> ');
                         }
                     }
                     catch (ex) {
@@ -2917,6 +2948,21 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 d = highlighTags(d);
                 d = highlightTypes(d);
                 d = createLinks(d);
+
+                var dHtml = '@returns</span> <span class="' + cls + 'jsdoc-type">';
+                var index = d.indexOf(dHtml);
+                var dType = "";
+                if (index > -1)
+                {
+                    var index3 = d.indexOf("{", index);
+                    var index2 = d.indexOf("}", index);
+                    if (index2 > index)
+                    {
+                        dType = d.substring((index3 + 1), index2);
+                        d = d.replace(dHtml + "{" + dType + "}", dHtml + dType);
+                    }
+                }
+
                 tip.appendChild(elFromString(d));
             }
             if (data.url) {
@@ -4224,6 +4270,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         + ".Ace-Tern-farg-current-description { margin-top:2px; color:black; } "
         + ".Ace-Tern-farg-current-name { font-weight:bold; } "
         + ".Ace-Tern-type { } "
+        + ".Ace-Tern-jsdoc-type { font-weight:bold; } "
         + ".Ace-Tern-jsdoc-tag { text-transform: lowercase; font-weight:bold; } "
         + ".Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } "
         + ".Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } "
@@ -4235,7 +4282,10 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         + ".Ace-Tern-typeHeader-simple{ display:block; margin-bottom:3px; color:#000000; } "
         + ".Ace-Tern-typeHeader{ display:block; margin-bottom:3px; } "
         + ".Ace-Tern-tooltip-link{font-size:smaller; color:blue;} "
-        + ".ace_autocomplete {width: 250px !important;}", 
+        + ".ace_autocomplete {width: 250px !important;}"
+        + ".Ace-Tern-farg-optionalBracket { font-weight: bold; }"
+        + ".Ace-Tern-jsdoc-param-optionalBracket { font-weight: bold; }"
+        + ".Ace-Tern-jsdoc-param-defaultValue { font-weight: bold; }", 
         "ace_tern");
 
 });
@@ -4263,7 +4313,8 @@ ace.define("ace/tern/tern",["require","exports","module","ace/config","ace/snipp
                         meta: s.tabTrigger && !s.name ? s.tabTrigger + "\u21E5 " : "snippet",
                         iconClass: " " + cls + "completion " + cls + "completion-snippet",
                         origin: "snippet",
-                        value: caption
+                        value: caption,
+                        isProperty: false
                     });
                 }
             }, this);
