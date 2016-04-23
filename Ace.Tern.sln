@@ -24,9 +24,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{AB45BFFB-8
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ace-builds", "ace-builds", "{52AD50CA-D360-4B2C-82B2-CC352A91D96A}"
-	ProjectSection(SolutionItems) = preProject
-		ace-builds\ext-tern.js = ace-builds\ext-tern.js
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src-noconflict", "src-noconflict", "{302ED34B-A903-48F0-A9F3-BFEDA10A34E1}"
 	ProjectSection(SolutionItems) = preProject
@@ -198,7 +195,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src-noconflict", "src-nocon
 		ace-builds\src-noconflict\theme-mono_industrial.js = ace-builds\src-noconflict\theme-mono_industrial.js
 		ace-builds\src-noconflict\theme-monokai.js = ace-builds\src-noconflict\theme-monokai.js
 		ace-builds\src-noconflict\theme-pastel_on_dark.js = ace-builds\src-noconflict\theme-pastel_on_dark.js
-		ace-builds\src-noconflict\theme-rosebud.js = ace-builds\src-noconflict\theme-rosebud.js
 		ace-builds\src-noconflict\theme-solarized_dark.js = ace-builds\src-noconflict\theme-solarized_dark.js
 		ace-builds\src-noconflict\theme-solarized_light.js = ace-builds\src-noconflict\theme-solarized_light.js
 		ace-builds\src-noconflict\theme-sqlserver.js = ace-builds\src-noconflict\theme-sqlserver.js
@@ -231,11 +227,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "custom", "custom", "{15630A
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "font", "font", "{D168BD62-B238-4957-BF05-457261FD37C3}"
-	ProjectSection(SolutionItems) = preProject
-		ace-builds\src-noconflict\fonts\consolas-webfont.woff = ace-builds\src-noconflict\fonts\consolas-webfont.woff
-		ace-builds\src-noconflict\fonts\inconsolata-ext.woff2 = ace-builds\src-noconflict\fonts\inconsolata-ext.woff2
-		ace-builds\src-noconflict\fonts\inconsolata.woff2 = ace-builds\src-noconflict\fonts\inconsolata.woff2
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "snippets", "snippets", "{6B133BCB-EEF3-4A5C-86BF-D39DEF020AE6}"
 	ProjectSection(SolutionItems) = preProject
@@ -365,11 +356,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "snippets", "snippets", "{6B
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "images", "images", "{E1797B3B-BC6D-4066-90EC-23979DD94E84}"
-	ProjectSection(SolutionItems) = preProject
-		ace-builds\src-noconflict\images\constant.png = ace-builds\src-noconflict\images\constant.png
-		ace-builds\src-noconflict\images\keyword.png = ace-builds\src-noconflict\images\keyword.png
-		ace-builds\src-noconflict\images\method.png = ace-builds\src-noconflict\images\method.png
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionProperties) = preSolution

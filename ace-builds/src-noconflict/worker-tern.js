@@ -5726,6 +5726,12 @@ if (isWorker || isChromeApp) {
                 if (!base) base = exports.base;
                 try {;
                     (function c(node, st, override) {
+                        
+                        if (!node)
+                        {
+                            return;
+                        }
+
                         var type = override || node.type;
                         if (node.start > pos || node.end < pos) {
                             return;
@@ -6666,7 +6672,8 @@ if (isWorker || isChromeApp) {
         if (query.caseInsensitive) word = word.toLowerCase();
         var wrapAsObjs = query.types || query.depths || query.docs || query.urls || query.origins;
 
-        function gather(prop, obj, depth, addInfo) {
+        //function gather(prop, obj, depth, addInfo) {
+        function gather(prop, obj, depth, addInfo, forElement) {
             // 'hasOwnProperty' and such are usually just noise, leave them
             // out when no prefix is provided.
             if (query.omitObjectPrototype !== false && obj == srv.cx.protos.Object && !word) return;
@@ -6679,6 +6686,19 @@ if (isWorker || isChromeApp) {
             var rec = wrapAsObjs ? {
                 name: prop
             } : prop;
+
+            if (forElement)
+            {
+                rec.name = "\"" + rec.name + "\"";
+            }
+            rec.depth = depth;
+
+            rec.origin = undefined;
+            if (obj && obj.origin)
+            {
+                rec.origin = obj.origin;
+            }
+
             completions.push(rec);
 
             if (obj && (query.types || query.docs || query.urls || query.origins)) {
@@ -6702,7 +6722,8 @@ if (isWorker || isChromeApp) {
         // Decide whether this is an object property, either in a member
         // expression or an object literal.
         if (exprAt) {
-            if (exprAt.node.type == "MemberExpression" && exprAt.node.object.end < wordStart) {
+            //if (exprAt.node.type == "MemberExpression" && exprAt.node.object.end < wordStart) {
+            if (exprAt.node.type == "MemberExpression" && exprAt.node.object && exprAt.node.object.end < wordStart) {
                 memberExpr = exprAt;
             }
             else if (isStringAround(exprAt.node, wordStart, wordEnd)) {
@@ -6733,6 +6754,20 @@ if (isWorker || isChromeApp) {
             ignoreObj = objLit.node.objType;
         }
         else if (memberExpr) {
+            
+            if (memberExpr.node.property.type != memberExpr.node.object.type)
+            {
+                console.log("Manually changing property node to match that of the object.");
+
+                memberExpr.node.property = {
+                    end: (memberExpr.node.object.end + 1),
+                    name: "✖",
+                    sourceFile: memberExpr.node.sourceFile,
+                    start: (memberExpr.node.object.end + 1),
+                    type: memberExpr.node.object.type
+                };
+            }
+            
             prop = memberExpr.node.property;
             prop = prop.type == "Literal" ? prop.value.slice(1) : prop.name;
             memberExpr.node = memberExpr.node.object;
@@ -7208,6 +7243,13 @@ if (isWorker || isChromeApp) {
             throw new Error("Unrecognized type spec: " + this.spec + " (at " + this.pos + ")");
         },
         parseFnType: function(comp, name, top) {
+
+            if (name == "Object.getOwnPropertyDescriptor")
+            {
+                var xyz = -1;
+            }
+
+
             var args = [],
                 names = [],
                 computed = false;
@@ -7228,20 +7270,41 @@ if (isWorker || isChromeApp) {
                     break;
                 }
             }
+
             var retType, computeRet, computeRetStart, fn;
             if (this.eat(" -> ")) {
                 var retStart = this.pos;
-                retType = this.parseType(true);
-                if (retType.call) {
-                    if (top) {
-                        computeRet = retType;
-                        retType = infer.ANull;
-                        computeRetStart = retStart;
-                    }
-                    else {
-                        computed = true;
-                    }
+
+            if (name == "Object.getOwnPropertyDescriptor")
+            {
+                var xyz = -1;
+            }
+
+                if (this.spec.substring(retStart) == "?")
+                {
+                    this.spec = this.spec.slice(0,-1) + "object";
                 }
+
+                //if (this.spec.substring(retStart) != "?")
+                {
+                    
+                    retType = this.parseType(true);
+                    if (retType.call) {
+                        if (top) {
+                            computeRet = retType;
+                            retType = infer.ANull;
+                            computeRetStart = retStart;
+                        }
+                        else {
+                            computed = true;
+                        }
+                    }
+
+                }
+//                else
+//                {
+//                    computed = true;
+//                }
             }
             else {
                 retType = infer.ANull;
@@ -7345,6 +7408,8 @@ if (isWorker || isChromeApp) {
                 return cx.str;
             case "bool":
                 return cx.bool;
+            case "object":
+                return cx.obj;
             case "<top>":
                 return cx.topScope;
             }
@@ -8440,9 +8505,17 @@ if (isWorker || isChromeApp) {
             }
             this.maybeUnregProtoPropHandler();
         },
-        gatherProperties: function(f, depth) {
-            for (var prop in this.props) if (prop != "<i>") f(prop, this, depth);
-            if (this.proto) this.proto.gatherProperties(f, depth + 1);
+        gatherProperties: function(f, depth, forElement) {
+            //for (var prop in this.props) if (prop != "<i>") f(prop, this, depth);
+            //if (this.proto) this.proto.gatherProperties(f, depth + 1);
+
+            //forElement = true; (testing....)
+            for (var prop in this.props) if (prop != "<i>") f(prop, this, depth, undefined, forElement);            
+            if (!forElement)
+            {
+                if (this.proto) this.proto.gatherProperties(f, depth + 1);
+            }
+
         },
         getObjType: function() {
             return this;
@@ -8547,9 +8620,11 @@ if (isWorker || isChromeApp) {
             cx.protos.String = new Obj(true, "String.prototype");
             cx.protos.Number = new Obj(true, "Number.prototype");
             cx.protos.Boolean = new Obj(true, "Boolean.prototype");
+            cx.protos.Object = new Obj(true, "Object.prototype");
             cx.str = new Prim(cx.protos.String, "string");
             cx.bool = new Prim(cx.protos.Boolean, "bool");
             cx.num = new Prim(cx.protos.Number, "number");
+            cx.obj = new Prim(cx.protos.Object, "object");
             cx.curOrigin = null;
 
             if (defs) for (var i = 0; i < defs.length; ++i)
@@ -13650,7 +13725,7 @@ if (isWorker || isChromeApp) {
             }
         }
 
-        return {
+        return { 
             type: type,
             end: pos,
             madeUp: madeUp
@@ -21854,3 +21929,33 @@ var def_ecma6 = {
 };
 
 //#endregion
+
+
+var def_rosebud = {
+    "!name": "rosebud",
+    "MdsFunctions": {
+        "RcdPtrIsValid": {
+            "!type": "fn(ptr: number) -> bool",
+            "!doc": "Checks to see that the record pointer is valid."
+        },
+        "!doc": "Static routines for the Multi Data Property Management System."
+    }
+//    "rpt": {
+//        "Fields1": {
+//            "item": {
+//                "!type": "fn(key: string) -> ?",
+//                "!doc": "The field object."
+//            },
+//            "!doc": "Report Generator fields collection."
+//        },
+//        "Fields2": {
+//            "item": {
+//                "!type": "[?]",
+//                "!doc": "The field object."
+//            },
+//            "!doc": "Report Generator fields collection."
+//        },
+//        "!doc": "Report Generator object."
+//    }
+};
+
