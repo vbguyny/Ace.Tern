@@ -2361,6 +2361,34 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             });
         }
 
+        // Built-in JS methods which return the same object break intellisense.
+        // By re-defining the method here fixes the issue.
+        var jsCodeContent = "\n"
+            + "Object.seal = function(obj)\n"
+            + "{\n"
+            + " /// <summary>\n"
+            + " /// Seals an object, preventing new properties from being added to it and marking all existing properties as non-configurable. Values of present properties can still be changed as long as they are writable.\n"
+            + " /// </summary>\n"
+            + " /// <param name=\"obj\" type=\"object\"></param>\n"
+            + " /// <returns type=\"object\"></returns>\n"
+            + " return obj;\n"
+            + "};\n"
+            + "Object.freeze = function(obj)\n"
+            + "{\n"
+            + " /// <summary>\n"
+            + " /// Freezes an object: that is, prevents new properties from being added to it; prevents existing properties from being removed; and prevents existing properties, or their enumerability, configurability, or writability, from being changed. In essence the object is made effectively immutable. The method returns the object being frozen.\n"
+            + " /// </summary>\n"
+            + " /// <param name=\"obj\" type=\"object\"></param>\n"
+            + " /// <returns type=\"object\"></returns>\n"
+            + " return obj;\n"
+            + "};\n";
+
+        files.push({
+            type: "full",
+            name: "jsCodeContent",
+            text: jsCodeContent
+        });
+
         return {
             query: query,
             files: files,
@@ -2605,10 +2633,29 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 }
                 function popupSelectionChanged() {
                     closeAllTips(); //remove(tooltip); //using close all , but its slower, comeback and remove single if its working right
-                    var data = editor.completer.popup.getData(editor.completer.popup.getRow());
-                    if (!data || !data.doc) { //no comments
+
+                    //var data = editor.completer.popup.getData(editor.completer.popup.getRow());
+                    var data = undefined;
+
+                    if (editor.completer)
+                    {
+                        if (editor.completer.popup)
+                        {
+                            data = editor.completer.popup.getData(editor.completer.popup.getRow());
+                        }
+                    }
+                    
+                    //if (!data || !data.doc) { //no comments
+                    if (!data)
+                    { //no comments
                         return;
                     }
+
+                    if (!data.doc && !data.type)
+                    {
+                        return;
+                    }
+
                     var node = editor.completer.popup.renderer.getContainerElement();
                     
                     if (!node || node.getBoundingClientRect().height == 0)
@@ -2703,6 +2750,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
 
         var d = data.doc;
         var params = data.params || parseJsDocParams(d); //parse params
+        var ret = data.ret || parseJsDocReturn(d); //parse return type
 
         if (includeType) {
             var fnArgs = data.fnArgs ? data.fnArgs : data.type ? parseFnType(data.type) : null; //will be null if parseFnType detects that this is not a function
@@ -2710,6 +2758,31 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 var getParam = function (arg, getChildren) {
                     if (params === null) return null;
                     if (!arg.name) return null;
+
+                    //if (arg.type == "{}")
+                    //{
+                    //    return {
+                    //        name: arg.name,
+                    //        parentName: "",
+                    //        type: "?",
+                    //        description: "",
+                    //        optional: false,
+                    //        defaultValue: ""
+                    //    };
+                    //}
+
+                    //if (arg.type == "[]")
+                    //{
+                    //    return {
+                    //        name: arg.name,
+                    //        parentName: "",
+                    //        type: "[?]",
+                    //        description: "",
+                    //        optional: false,
+                    //        defaultValue: ""
+                    //    };
+                    //}
+
                     var children = [];
                     for (var i = 0; i < params.length; i++) {
                         if (getChildren === true) {
@@ -2742,7 +2815,18 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 useDetailedArgHints = true;
                 var typeStr = '';
 
-                if (fnArgs.rettype) {
+                if (ret && ret.length != 0)
+                {
+                    if (useDetailedArgHints)
+                    {
+                        typeStr += '<span class="' + cls + 'type">' + htmlEncode(ret.type) + '</span> ';
+                    }
+                    else
+                    {
+                        typeStr += htmlEncode(ret.type) + ' ';
+                    }
+                }
+                else if (fnArgs.rettype) {
                     if (useDetailedArgHints) {
                         typeStr += '<span class="' + cls + 'type">' + htmlEncode(fnArgs.rettype) + '</span> ';
                     }
@@ -2802,13 +2886,15 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                             }
                             type += ")";
                         }
-                        else if (type == "?")
+                        else if (type == "?" || type == "{}")
                         {
-                            type = "object";
+                            //type = "object";
+                            type = "";
                         }
-                        else if (type == "[?]")
+                        else if (type == "[?]" || type == "[]")
                         {
-                            type = "[object]";
+                            //type = "[object]";
+                            type = "[]";
                         }
 
                         var optional = false;
@@ -2820,11 +2906,13 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
 
                                 if (type == "?")
                                 {
-                                    type = "object";
+                                    //type = "object";
+                                    type = "";
                                 }
                                 else if (type == "[?]")
                                 {
-                                    type = "[object]";
+                                    //type = "[object]";
+                                    type = "[]";
                                 }
 
                             }
@@ -2873,20 +2961,60 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
 //                }
 
                 typeStr = '<span class="' + cls + (useDetailedArgHints ? "typeHeader" : "typeHeader-simple") + '">' + typeStr + '</span>'; //outer wrapper
-                if (useDetailedArgHints) {
-                    if (activeParam && activeParam.description) {
-                        typeStr += '<div class="' + cls + 'farg-current-description"><span class="' + cls + 'farg-current-name">' + activeParam.name + ': </span>' + activeParam.description + '</div>';
-                    }
-                    if (activeParamChildren && activeParamChildren.length > 0) {
-                        for (var i = 0; i < activeParamChildren.length; i++) {
-                            //var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
-                            var t = activeParamChildren[i].type ? '<span class="' + cls + 'jsdoc-type">' + activeParamChildren[i].type + ' </span>' : '';
-                            typeStr += '<div class="' + cls + 'farg-current-description">' + t + '<span class="' + cls + 'farg-current-name">' + getParamDetailedName(activeParamChildren[i]) + ': </span>' + activeParamChildren[i].description + '</div>';
-                        }
-                    }
-                }
+
+                // Moved below.
+                //if (useDetailedArgHints) {
+                //    if (activeParam && activeParam.description) {
+                //        typeStr += '<div class="' + cls + 'farg-current-description"><span class="' + cls + 'farg-current-name">' + activeParam.name + ': </span>' + activeParam.description + '</div>';
+                //    }
+                //    if (activeParamChildren && activeParamChildren.length > 0) {
+                //        for (var i = 0; i < activeParamChildren.length; i++) {
+                //            //var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
+                //            var t = activeParamChildren[i].type ? '<span class="' + cls + 'jsdoc-type">' + activeParamChildren[i].type + ' </span>' : '';
+                //            typeStr += '<div class="' + cls + 'farg-current-description">' + t + '<span class="' + cls + 'farg-current-name">' + getParamDetailedName(activeParamChildren[i]) + ': </span>' + activeParamChildren[i].description + '</div>';
+                //        }
+                //    }
+                //}
+
                 tip.appendChild(elFromString(typeStr));
             }
+            else if (data.type && data.type.indexOf("fn") != 0) //if (ret && ret.length == 0)
+            {
+                typeStr = "";
+                var dType = data.type;
+
+                switch (dType)
+                {
+                    case "?":
+                        dType = "";
+                        break;
+                    case "[?]":
+                        dType = "array";
+                        break;
+                }
+
+                var dName = htmlEncode(data.exprName || data.name || data.caption || "function");
+                if (dType == dName)
+                {
+                    dType = "object";
+                }
+
+                if (useDetailedArgHints)
+                {
+                    typeStr += '<span class="' + cls + 'type">' + htmlEncode(dType) + '</span> ';
+                }
+                else
+                {
+                    typeStr += htmlEncode(dType) + ' ';
+                }                
+                typeStr += dName;
+
+                typeStr = '<span class="' + cls + (useDetailedArgHints ? "typeHeader" : "typeHeader-simple") + '">' + typeStr + '</span>'; //outer wrapper
+
+                tip.appendChild(elFromString(typeStr));
+
+            }
+
         }
         
         //if (isNaN(parseInt(activeArg)))
@@ -2941,7 +3069,8 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                         str = '<span class="' + cls + 'jsdoc-param-wrapper">' + paramStr + '</span>' + str;
                     }
 
-                    return beforeParams + str;
+                    //return beforeParams + str;
+                    return beforeParams;
                 };
                 var highlighTags = function (str) {
                     try {
@@ -3024,6 +3153,27 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
 
                 tip.appendChild(elFromString(d));
             }
+
+            // Show the arg hint after the description of the method.
+            if (useDetailedArgHints)
+            {
+                typeStr = "";
+                if (activeParam && activeParam.description)
+                {
+                    typeStr += '<div class="' + cls + 'farg-current-description"><span class="' + cls + 'farg-current-name">' + activeParam.name + ': </span>' + activeParam.description + '</div>';
+                }
+                if (activeParamChildren && activeParamChildren.length > 0)
+                {
+                    for (var i = 0; i < activeParamChildren.length; i++)
+                    {
+                        //var t = activeParamChildren[i].type ? '<span class="' + cls + 'type">{' + activeParamChildren[i].type + '} </span>' : '';
+                        var t = activeParamChildren[i].type ? '<span class="' + cls + 'jsdoc-type">' + activeParamChildren[i].type + ' </span>' : '';
+                        typeStr += '<div class="' + cls + 'farg-current-description">' + t + '<span class="' + cls + 'farg-current-name">' + getParamDetailedName(activeParamChildren[i]) + ': </span>' + activeParamChildren[i].description + '</div>';
+                    }
+                }
+                tip.appendChild(elFromString(typeStr));
+            }
+
             if (data.url) {
                 tip.appendChild(document.createTextNode(" "));
                 var link = elt("a", null, "[docs]");
@@ -3118,6 +3268,106 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         }
         return params;
     }
+
+    function parseJsDocReturn(str)
+    {
+        if (!str) return [];
+        str = str.replace(/@returns/gi, '@returns'); //make sure all param tags are lowercase
+        var params = [];
+        while (str.indexOf('@returns') !== -1)
+        {
+            str = str.substring(str.indexOf('@returns') + 8); //starting after first param match
+            var nextTagStart = str.indexOf('@'); //split on next param (will break if @symbol inside of param, like a link... dont have to time fullproof right now)
+
+            var paramStr = nextTagStart === -1 ? str : str.substr(0, nextTagStart);
+            var thisParam = {
+                //name: "",
+                //parentName: "",
+                type: "",
+                description: "",
+                //optional: false,
+                //defaultValue: ""
+            };
+            var re = /\s{[^}]{1,50}}\s/;
+            var m;
+            paramStr += " ";
+            while ((m = re.exec(paramStr)) !== null)
+            {
+                if (m.index === re.lastIndex)
+                {
+                    re.lastIndex++;
+                }
+                thisParam.type = m[0];
+                paramStr = paramStr.replace(thisParam.type, '').trim(); //remove type from param string
+                thisParam.type = thisParam.type.replace('{', '').replace('}', '').replace(' ', '').trim(); //remove brackets and spaces
+            }
+            paramStr = paramStr.trim(); //we now have a single param string starting after the type, next string should be the parameter name
+            //if (paramStr.substr(0, 1) === '[')
+            //{
+            //    thisParam.optional = true;
+            //    var endBracketIdx = paramStr.indexOf(']');
+            //    if (endBracketIdx === -1)
+            //    {
+            //        showError('failed to parse return name; Found starting \'[\' but missing closing \']\'');
+            //        continue; //go to next
+            //    }
+            //    var nameStr = paramStr.substring(0, endBracketIdx + 1);
+            //    paramStr = paramStr.replace(nameStr, '').trim(); //remove name portion from param str
+            //    nameStr = nameStr.replace('[', '').replace(']', ''); //remove brackets
+            //    if (nameStr.indexOf('=') !== -1)
+            //    {
+            //        var defaultValue = nameStr.substr(nameStr.indexOf('=') + 1);
+            //        if (defaultValue.trim() === '')
+            //        {
+            //            thisParam.defaultValue = "undefined";
+            //        }
+            //        else
+            //        {
+            //            thisParam.defaultValue = defaultValue.trim();
+            //        }
+            //        thisParam.name = nameStr.substring(0, nameStr.indexOf('=')).trim(); //set name
+            //    }
+            //    else
+            //    {
+            //        thisParam.name = nameStr.trim();
+            //    }
+            //}
+            //else
+            //{ //not optional
+            //    var nextSpace = paramStr.indexOf(' ');
+            //    if (nextSpace !== -1)
+            //    {
+            //        thisParam.name = paramStr.substr(0, nextSpace);
+            //        paramStr = paramStr.substr(nextSpace).trim(); //remove name portion from param str
+            //    }
+            //    else
+            //    { //no more spaces left, next portion of string must be name and there is no description
+            //        thisParam.name = paramStr;
+            //        paramStr = '';
+            //    }
+            //}
+            //var nameDotIdx = thisParam.name.indexOf('.');
+            //if (nameDotIdx !== -1)
+            //{
+            //    thisParam.parentName = thisParam.name.substring(0, nameDotIdx);
+            //    thisParam.name = thisParam.name.substring(nameDotIdx + 1);
+            //}
+            paramStr = paramStr.trim();
+            if (paramStr.length > 0)
+            {
+                thisParam.description = paramStr.replace('-', '').trim(); //optional hiphen specified before start of description
+            }
+            //thisParam.name = htmlEncode(thisParam.name);
+            //thisParam.parentName = htmlEncode(thisParam.parentName);
+            thisParam.description = htmlEncode(thisParam.description);
+            thisParam.type = htmlEncode(thisParam.type);
+            //thisParam.defaultValue = htmlEncode(thisParam.defaultValue);
+            params.push(thisParam);
+            break;
+        }
+        return params[0];
+    }
+
     function findRefs(ts, editor, cb) {
         if (!inJavascriptMode(editor)) {
             return;
@@ -3633,9 +3883,12 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
     function showArgHints(ts, editor, pos) {
         closeArgHints(ts);
 
-        if (editor.completer.popup.isOpen == true)
+        if (editor.completer)
         {
-            return;
+            if (editor.completer.popup && editor.completer.popup.isOpen == true)
+            {
+                return;
+            }
         }
 
         var cache = ts.cachedArgHints,
@@ -3705,11 +3958,13 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         
         if (rettype == "?")
         {
-            rettype = "object";
+            //rettype = "object";
+            rettype = "";
         } 
         else if (rettype == "[?]")
         {
-            rettype = "[object]";
+            //rettype = "[object]";
+            rettype = "[]";
         } 
         else if (rettype == "fn()")
         {
@@ -3790,6 +4045,16 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         node.style.left = x + "px";
         node.style.top = y + "px";
         document.body.appendChild(node);
+
+        var editorRect = editor.container.getBoundingClientRect();
+        var nodeRect = node.getBoundingClientRect();
+        var cursorRect = editor.renderer.$cursorLayer.cursors[0].getBoundingClientRect();
+
+        if (nodeRect.bottom > editorRect.bottom && editorRect.height > nodeRect.height)
+        {
+            node.style.top = (cursorRect.top - nodeRect.height - 2) + "px";
+        }
+
         var closeBtn = document.createElement('a');
         closeBtn.setAttribute('title', 'close');
         closeBtn.setAttribute('class', cls + 'tooltip-boxclose');
@@ -4330,8 +4595,8 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         + ".Ace-Tern-fname { color: black; } "
         + ".Ace-Tern-farg { } "
         + ".Ace-Tern-farg-current { font-weight:bold; } "
-        + ".Ace-Tern-farg-current-description { margin-top:2px; color:black; } "
-        + ".Ace-Tern-farg-current-name { font-weight:bold; } "
+        + ".Ace-Tern-farg-current-description { margin-top:2px; color:black; font-style: italic; } "
+        + ".Ace-Tern-farg-current-name { font-weight:bold; font-style: italic; } "
         + ".Ace-Tern-type { } "
         + ".Ace-Tern-jsdoc-type { font-weight:bold; } "
         + ".Ace-Tern-jsdoc-tag { text-transform: lowercase; font-weight:bold; } "

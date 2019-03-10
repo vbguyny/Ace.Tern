@@ -17,6 +17,26 @@
 // declare global: tern, server
 /*jshint maxerr:10000 */
 
+String.prototype.replaceAll = function (search, replacement)
+{
+    var target = this;
+    return target.split(search).join(replacement);
+};
+
+function tXml(a, d)
+{
+    function c() { for (var l = []; a[b];) { if (60 == a.charCodeAt(b)) { if (47 === a.charCodeAt(b + 1)) { b = a.indexOf(">", b); break } else if (33 === a.charCodeAt(b + 1)) { if (45 == a.charCodeAt(b + 2)) { for (; 62 !== a.charCodeAt(b) || 45 != a.charCodeAt(b - 1) || 45 != a.charCodeAt(b - 2) || -1 == b;) b = a.indexOf(">", b + 1); -1 === b && (b = a.length) } else for (b += 2; 62 !== a.charCodeAt(b) ;) b++; b++; continue } var c = f(); l.push(c) } else c = b, b = a.indexOf("<", b) - 1, -2 === b && (b = a.length), c = a.slice(c, b + 1), 0 < c.trim().length && l.push(c); b++ } return l } function l()
+    {
+        for (var c =
+        b; -1 === g.indexOf(a[b]) ;) b++; return a.slice(c, b)
+    } function f()
+    {
+        var d = {}; b++; d.tagName = l(); for (var f = !1; 62 !== a.charCodeAt(b) ;) { var e = a.charCodeAt(b); if (64 < e && 91 > e || 96 < e && 123 > e) { for (var g = l(), e = a.charCodeAt(b) ; 39 !== e && 34 !== e && !(64 < e && 91 > e || 96 < e && 123 > e) && 62 !== e;) b++, e = a.charCodeAt(b); f || (d.attributes = {}, f = !0); if (39 === e || 34 === e) { var e = a[b], h = ++b; b = a.indexOf(e, h); e = a.slice(h, b) } else e = null, b--; d.attributes[g] = e } b++ } 47 !== a.charCodeAt(b - 1) && ("script" == d.tagName ? (f = b + 1, b = a.indexOf("\x3c/script>", b), d.children =
+        [a.slice(f, b - 1)], b += 8) : "style" == d.tagName ? (f = b + 1, b = a.indexOf("</style>", b), d.children = [a.slice(f, b - 1)], b += 7) : -1 == k.indexOf(d.tagName) && (b++, d.children = c(g))); return d
+    } d = d || {}; var g = "\n\t>/= ", k = ["img", "br", "input", "meta", "link"], h = null; if (d.searchId) { var b = (new RegExp("s*ids*=s*['\"]" + d.searchId + "['\"]")).exec(a).index; -1 !== b && (b = a.lastIndexOf("<", b), -1 !== b && (h = f())); return b } b = 0; h = c(); d.filter && (h = tXml.filter(h, d.filter)); d.simplify && (h = tXml.simplefy(h)); return h
+}
+tXml.simplify = function (a) { var d = {}; if (1 === a.length && "string" == typeof a[0]) return a[0]; a.forEach(function (a) { d[a.tagName] || (d[a.tagName] = []); if ("object" == typeof a) { var c = tXml.simplefy(a.children); d[a.tagName].push(c); a.attributes && (c._attributes = a.attributes) } else d[a.tagName].push(a) }); for (var c in d) 1 == d[c].length && (d[c] = d[c][0]); return d }; tXml.filter = function (a, d) { var c = []; a.forEach(function (a) { "object" === typeof a && d(a) && c.push(a); a.children && (a = tXml.filter(a.children, d), c = c.concat(a)) }); return c };
+tXml.domToXml = function (a) { function d(a) { if (a) for (var f = 0; f < a.length; f++) if ("string" == typeof a[f]) c += a[f].trim(); else { var g = a[f]; c += "<" + g.tagName; var k = void 0; for (k in g.attributes) c = -1 === g.attributes[k].indexOf('"') ? c + (" " + k + '="' + g.attributes[k].trim() + '"') : c + (" " + k + "='" + g.attributes[k].trim() + "'"); c += ">"; d(g.children); c += "</" + g.tagName + ">" } } var c = ""; d(O); return c }; 
 
 /**
  * this file used in web worker or normal javascript execution
@@ -9642,6 +9662,213 @@ if (isWorker || isChromeApp) {
         return true;
     }
 
+    exports.commentAfter = function(text, pos) {
+        while (pos < text.length) {
+            var next = text.charCodeAt(pos);
+            if (next == 47) {
+                var after = text.charCodeAt(pos + 1),
+                    end;
+                if (after == 47) // line comment
+                end = text.indexOf("\n", pos + 2);
+                else if (after == 42) // block comment
+                end = text.indexOf("*/", pos + 2);
+                else return;
+                return text.slice(pos + 2, end < 0 ? text.length : end);
+            }
+            else if (isSpace(next)) {
+                ++pos;
+            }
+        }
+    };
+
+    exports.GetLineIndex = function (Lines, Pos)
+    {
+        var TotalLength = 0;
+        var Index = 0;
+
+        while (true)
+        {
+            var LineLength = (Lines[Index].length + 1);
+            TotalLength += LineLength;
+            if (TotalLength >= Pos)
+            {
+                break;
+            }
+            Index++;
+        }
+
+        return Index;
+    };
+
+    exports.commentsContainXML = false;
+
+    exports.comments = function (text, pos, offset)
+    {
+        var Comments = null;
+
+        exports.commentsContainXML = false;
+
+        if (offset == 1)
+        {
+            var Lines = text.substring(pos).trim().split('\n');
+
+            if (Lines[0].indexOf("}") == -1)
+            {
+                for (var Index = 1; Index <= Lines.length - 1; Index++)
+                {
+                    var Line = Lines[Index].trim();
+                    if (Line.indexOf("/// ") == 0)
+                    {
+                        var Comment = Line.substring(4);
+                        if (Comments == null)
+                        {
+                            Comments = Comment
+                        }
+                        else
+                        {
+                            Comments += "\n" + Comment;
+                        }
+                    }
+                    else if (Line == "{" || Line == "")
+                    {
+                        // continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            //var Lines = text.split('\n');
+            //var LineIndex = exports.GetLineIndex(Lines, pos);
+            var Lines = text.substring(0, pos).trim().split('\n');
+
+            for (var Index = Lines.length - 1; Index > -1; Index--)
+            {
+                var Line = Lines[Index].trim();
+                if (Line.indexOf("/// ") == 0)
+                {
+                    var Comment = Line.substring(4);
+                    if (Comments == null)
+                    {
+                        Comments = Comment
+                    }
+                    else
+                    {
+                        Comments = Comment + "\n" + Comments;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        if (Comments != null)
+        {
+            var jsonDoc = tXml(Comments);
+
+            if (typeof (jsonDoc[0]) == "object")
+            {
+                exports.commentsContainXML = true;
+
+                Comments = " * \n";
+
+                for (var Index = 0; Index <= jsonDoc.length - 1; Index++)
+                {
+                    var jsonTag = jsonDoc[Index];
+                    switch (jsonTag.tagName)
+                    {
+                        case "summary":
+                            Comments += " * " + jsonTag.children[0].trim() + "\n";
+                            break;
+                        case "param":
+                            var ParamName = jsonTag.attributes.name;
+                            var TypeName = "";
+                            var Description = "";
+                            if (jsonTag.children.length != 0)
+                            {
+                                Description = " - ";
+                                for (var ChildIndex = 0; ChildIndex <= jsonTag.children.length - 1; ChildIndex++)
+                                {
+                                    var Child = jsonTag.children[ChildIndex];
+                                    if (Child.tagName && Child.tagName == "br")
+                                    {
+                                        Description += "\n";
+                                    }
+                                    else
+                                    {
+                                        Description += " " + Child.trim();
+                                    }
+                                }
+                            }
+                            if (jsonTag.attributes && jsonTag.attributes.type)
+                            {
+                                TypeName = jsonTag.attributes.type;
+                                if (jsonTag.attributes.integer)
+                                {
+                                    if (jsonTag.attributes.integer == "true")
+                                    {
+                                        TypeName = "int";
+                                    }
+                                    else
+                                    {
+                                        TypeName = "decimal";
+                                    }
+                                }
+                                TypeName = "{ " + TypeName + " } ";
+                            }
+                            if (jsonTag.attributes && jsonTag.attributes.optional && jsonTag.attributes.optional == "true")
+                            {
+                                ParamName = "[" + ParamName + "]";
+                            }
+                            if (TypeName != "" || ParamName != "" || Description != "")
+                            {
+                                Comments += " * @param " + TypeName + ParamName + Description + "\n";
+                            }
+                            break;
+                        case "returns":
+                            var TypeName = "";
+                            var Description = "";
+                            if (jsonTag.children.length != 0)
+                            {
+                                Description = " - " + jsonTag.children[0].trim();
+                            }
+                            if (jsonTag.attributes && jsonTag.attributes.type)
+                            {
+                                TypeName = jsonTag.attributes.type;
+                                if (jsonTag.attributes.integer)
+                                {
+                                    if (jsonTag.attributes.integer == "true")
+                                    {
+                                        TypeName = "int";
+                                    }
+                                    else
+                                    {
+                                        TypeName = "decimal";
+                                    }
+                                }
+                                TypeName = "{ " + TypeName + " } ";
+                            }
+                            if (TypeName != "" || Description != "")
+                            {
+                                Comments += " * @returns " + TypeName + Description + "\n";
+                            }
+                            break;
+                    }
+                }
+            }
+
+            return new Array(Comments);
+        }
+
+        return Comments;
+    };
+
     // Gather comments directly before a function
     exports.commentsBefore = function(text, pos) {
         var found = null,
@@ -9693,29 +9920,25 @@ if (isWorker || isChromeApp) {
         return found;
     };
 
-    exports.commentAfter = function(text, pos) {
-        while (pos < text.length) {
-            var next = text.charCodeAt(pos);
-            if (next == 47) {
-                var after = text.charCodeAt(pos + 1),
-                    end;
-                if (after == 47) // line comment
-                end = text.indexOf("\n", pos + 2);
-                else if (after == 42) // block comment
-                end = text.indexOf("*/", pos + 2);
-                else return;
-                return text.slice(pos + 2, end < 0 ? text.length : end);
-            }
-            else if (isSpace(next)) {
-                ++pos;
-            }
+    exports.ensureCommentsBefore = function (text, node)
+    {
+        if (node.hasOwnProperty("commentsBefore")) return node.commentsBefore;
+
+        node.commentsBefore = null;
+
+        var commentsBefore = exports.comments(text, node.start, -1); var commentsBeforeContainXML = exports.commentsContainXML;
+        var commentsAfter = exports.comments(text, node.start, 1); var commentsAfterContainXML = exports.commentsContainXML;
+
+        if (commentsAfter != null && commentsAfterContainXML == true)
+        {
+            node.commentsBefore = commentsAfter;
+        }
+        else if (commentsBeforeContainXML == false)
+        {
+            node.commentsBefore = commentsBefore;
         }
     };
 
-    exports.ensureCommentsBefore = function(text, node) {
-        if (node.hasOwnProperty("commentsBefore")) return node.commentsBefore;
-        return node.commentsBefore = exports.commentsBefore(text, node.start);
-    };
 });
 
 //#endregion
@@ -13450,7 +13673,9 @@ if (isWorker || isChromeApp) {
             AssignmentExpression: function(node) {
                 if (node.operator == "=") attachComments(node);
             },
-            ObjectExpression: function(node) {
+            ObjectExpression: function (node)
+            {
+                attachComments(node);
                 for (var i = 0; i < node.properties.length; ++i)
                 attachComments(node.properties[i]);
             },
@@ -13485,7 +13710,10 @@ if (isWorker || isChromeApp) {
                 }));
             },
             ObjectExpression: function(node, scope) {
-                for (var i = 0; i < node.properties.length; ++i) {
+                if (node.commentsBefore) interpretComments(node, node.commentsBefore, scope, scope.getProp(node.objType.name));
+
+                for (var i = 0; i < node.properties.length; ++i)
+                {
                     var prop = node.properties[i];
                     if (prop.commentsBefore) interpretComments(prop, prop.commentsBefore, scope,
                     node.objType.getProp(prop.key.name));
@@ -21958,4 +22186,5 @@ var def_rosebud = {
 //        "!doc": "Report Generator object."
 //    }
 };
+
 

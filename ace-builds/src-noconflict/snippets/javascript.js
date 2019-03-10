@@ -102,12 +102,18 @@ snippet fori\n\
 snippet has\n\
 	hasOwnProperty(${1})\n\
 # docstring\n\
-snippet /**\n\
-snippet @par\n\
-regex /^\\s*\\*\\s*/@(para?m?)?/\n\
-	@param {${1:type}} ${2:name} ${3:description}\n\
-snippet @ret\n\
-	@return {${1:type}} ${2:description}\n\
+# snippet /**\n\
+# snippet @par\n\
+# regex /^\\s*\\*\\s*/@(para?m?)?/\n\
+# 	@param {${1:type}} ${2:name} ${3:description}\n\
+# snippet @ret\n\
+# 	@return {${1:type}} ${2:description}\n\
+snippet ///\n\
+	/// <summary>\n\
+	/// ${1:MethodDescription}\n\
+	/// </summary>\n\
+	/// <param name=\"${2:ParameterName}\" type=\"${3:ParameterType}\">${4:ParameterDescription}</param>\n\
+	/// <returns type=\"${5:ReturnType}\">${6:ReturnDescription}</returns>\n\
 # JSON.parse\n\
 snippet jsonp\n\
 	JSON.parse(${1:jstr});\n\
