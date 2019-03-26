@@ -9834,10 +9834,14 @@ if (isWorker || isChromeApp) {
                         case "returns":
                             var TypeName = "";
                             var Description = "";
-                            if (jsonTag.children.length != 0)
-                            {
-                                Description = " - " + jsonTag.children[0].trim();
-                            }
+                            //if (jsonTag.children.length != 0)
+                            //{
+                            //    Description = "- " + jsonTag.children[0].trim();
+                            //    //if (jsonTag.children[0].trim() == "A reference to the top-most iframe element.")
+                            //    //{
+                            //    //    var _debug = 1;
+                            //    //}
+                            //}
                             if (jsonTag.attributes && jsonTag.attributes.type)
                             {
                                 TypeName = jsonTag.attributes.type;
@@ -22160,31 +22164,29 @@ var def_ecma6 = {
 
 
 var def_rosebud = {
-    "!name": "rosebud",
-    "MdsFunctions": {
-        "RcdPtrIsValid": {
-            "!type": "fn(ptr: number) -> bool",
-            "!doc": "Checks to see that the record pointer is valid."
-        },
-        "!doc": "Static routines for the Multi Data Property Management System."
-    }
-//    "rpt": {
-//        "Fields1": {
-//            "item": {
-//                "!type": "fn(key: string) -> ?",
-//                "!doc": "The field object."
-//            },
-//            "!doc": "Report Generator fields collection."
+//    "!name": "rosebud",
+//    "MdsFunctions": {
+//        "RcdPtrIsValid": {
+//            "!type": "fn(ptr: number) -> bool",
+//            "!doc": "Checks to see that the record pointer is valid."
 //        },
-//        "Fields2": {
-//            "item": {
-//                "!type": "[?]",
-//                "!doc": "The field object."
-//            },
-//            "!doc": "Report Generator fields collection."
-//        },
-//        "!doc": "Report Generator object."
+//        "!doc": "Static routines for the Multi Data Property Management System."
 //    }
+////    "rpt": {
+////        "Fields1": {
+////            "item": {
+////                "!type": "fn(key: string) -> ?",
+////                "!doc": "The field object."
+////            },
+////            "!doc": "Report Generator fields collection."
+////        },
+////        "Fields2": {
+////            "item": {
+////                "!type": "[?]",
+////                "!doc": "The field object."
+////            },
+////            "!doc": "Report Generator fields collection."
+////        },
+////        "!doc": "Report Generator object."
+////    }
 };
-
-

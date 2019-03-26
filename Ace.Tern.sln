@@ -1,11 +1,14 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C309C19F-5C40-4F3D-B806-A96DDFA0EB7B}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
 		demo.html = demo.html
 		DemoJavascript.js = DemoJavascript.js
+		DemoSql.sql = DemoSql.sql
 		gitConfig.txt = gitConfig.txt
 		helpers.js = helpers.js
 		index.html = index.html

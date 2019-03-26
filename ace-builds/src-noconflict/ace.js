@@ -3638,6 +3638,7 @@ exports.loadModule = function(moduleName, onLoad) {
     if (!exports.get("packaged"))
         return afterLoad();
     net.loadScript(exports.moduleUrl(moduleName, moduleType), afterLoad);
+    //net.loadScript("https://www.rosebud.com/rosebud/scripts/shared/MdsFunctions.js", afterLoad);
 };
 init(true);function init(packaged) {
 

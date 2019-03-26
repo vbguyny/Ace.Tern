@@ -2815,7 +2815,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
                 useDetailedArgHints = true;
                 var typeStr = '';
 
-                if (ret && ret.length != 0)
+                if (ret && ret.length != 0 && ret.type)
                 {
                     if (useDetailedArgHints)
                     {
@@ -4565,7 +4565,7 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
             });
         };
     }
-
+    
 
     var dom = require("ace/lib/dom");
     //dom.importCssString(".Ace-Tern-tooltip { border: 1px solid silver; border-radius: 3px; color: #444; padding: 2px 5px; padding-right:15px; font-size: 90%; font-family: monospace; background-color: white; white-space: pre-wrap; max-width: 50em; max-height:30em; overflow-y:auto; position: absolute; z-index: 10; -webkit-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); -moz-box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); box-shadow: 2px 3px 5px rgba(0, 0, 0, .2); transition: opacity 1s; -moz-transition: opacity 1s; -webkit-transition: opacity 1s; -o-transition: opacity 1s; -ms-transition: opacity 1s; } .Ace-Tern-tooltip-boxclose { position:absolute; top:0; right:3px; color:red; } .Ace-Tern-tooltip-boxclose:hover { background-color:yellow; } .Ace-Tern-tooltip-boxclose:before { content:'×'; cursor:pointer; font-weight:bold; font-size:larger; } .Ace-Tern-completion { padding-left: 12px; position: relative; } .Ace-Tern-completion:before { position: absolute; left: 0; bottom: 0; border-radius: 50%; font-weight: bold; height: 13px; width: 13px; font-size:11px; line-height: 14px; text-align: center; color: white; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; } .Ace-Tern-completion-unknown:before { content:'?'; background: #4bb; } .Ace-Tern-completion-object:before { content:'O'; background: #77c; } .Ace-Tern-completion-fn:before { content:'F'; background: #7c7; } .Ace-Tern-completion-array:before { content:'A'; background: #c66; } .Ace-Tern-completion-number:before { content:'1'; background: #999; } .Ace-Tern-completion-string:before { content:'S'; background: #999; } .Ace-Tern-completion-bool:before { content:'B'; background: #999; } .Ace-Tern-completion-guess { color: #999; } .Ace-Tern-hint-doc { max-width: 35em; } .Ace-Tern-fhint-guess { opacity: .7; } .Ace-Tern-fname { color: black; } .Ace-Tern-farg { color: #70a; } .Ace-Tern-farg-current { color: #70a; font-weight:bold; font-size:larger; text-decoration:underline; } .Ace-Tern-farg-current-description { font-style:italic; margin-top:2px; color:black; } .Ace-Tern-farg-current-name { font-weight:bold; } .Ace-Tern-type { color: #07c; font-size:smaller; } .Ace-Tern-jsdoc-tag { color: #B93A38; text-transform: lowercase; font-size:smaller; font-weight:600; } .Ace-Tern-jsdoc-param-wrapper{ /*background-color: #FFFFE3; padding:3px;*/ } .Ace-Tern-jsdoc-tag-param-child{ display:inline-block; width:0px; } .Ace-Tern-jsdoc-param-optionalWrapper { font-style:italic; } .Ace-Tern-jsdoc-param-optionalBracket { color:grey; font-weight:bold; } .Ace-Tern-jsdoc-param-name { color: #70a; font-weight:bold; } .Ace-Tern-jsdoc-param-defaultValue { color:grey; } .Ace-Tern-jsdoc-param-description { color:black; } .Ace-Tern-typeHeader-simple{ font-size:smaller; font-weight:bold; display:block; font-style:italic; margin-bottom:3px; color:grey; } .Ace-Tern-typeHeader{ display:block; font-style:italic; margin-bottom:3px; } .Ace-Tern-tooltip-link{font-size:smaller; color:blue;} .ace_autocomplete {width: 400px !important;}", "ace_tern");
@@ -4589,6 +4589,11 @@ ace.define("ace/tern/tern_server",["require","exports","module","ace/range","ace
         + ".Ace-Tern-completion-tag:before { content:''; background-image: url('./ace-builds/src-noconflict/images/tag.png'); } "
         + ".Ace-Tern-completion-attribute:before { content:''; background-image: url('./ace-builds/src-noconflict/images/attribute.png'); } "
         + ".Ace-Tern-completion-keyword:before { content:''; background-image: url('./ace-builds/src-noconflict/images/keyword.png'); } "
+        + ".Ace-Tern-completion-operator:before { content:''; background-image: url('./ace-builds/src-noconflict/images/keyword.png'); } "
+        + ".Ace-Tern-completion-type:before { content:''; background-image: url('./ace-builds/src-noconflict/images/keyword.png'); } "
+        + ".Ace-Tern-completion-statement:before { content:''; background-image: url('./ace-builds/src-noconflict/images/snippet.png'); } "
+        + ".Ace-Tern-completion-function:before { content:''; background-image: url('./ace-builds/src-noconflict/images/method.png'); } "
+        + ".Ace-Tern-completion-procedure:before { content:''; background-image: url('./ace-builds/src-noconflict/images/method.png'); } "
         + ".Ace-Tern-completion-guess { color: #999; } "
         + ".Ace-Tern-hint-doc { max-width: 35em; } "
         + ".Ace-Tern-fhint-guess { opacity: .7; } "

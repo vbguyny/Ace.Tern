@@ -3,37 +3,44 @@ ace.define("ace/snippets/javascript",["require","exports","module"], function(re
 
 exports.snippetText = "# Prototype\n\
 snippet proto\n\
-	${1:class_name}.prototype.${2:method_name} = function(${3:first_argument}) {\n\
+	${1:class_name}.prototype.${2:method_name} = function(${3:first_argument})\n\
+	{\n\
 		${4:// body...}\n\
 	};\n\
 # Function\n\
 snippet fun\n\
-	function ${1?:function_name}(${2:argument}) {\n\
+	function ${1?:function_name}(${2:argument})\n\
+	{\n\
 		${3:// body...}\n\
 	}\n\
 # Anonymous Function\n\
 regex /((=)\\s*|(:)\\s*|(\\()|\\b)/f/(\\))?/\n\
 snippet f\n\
-	function${M1?: ${1:functionName}}($2) {\n\
+	function${M1?: ${1:functionName}}($2)\n\
+	{\n\
 		${0:$TM_SELECTED_TEXT}\n\
 	}${M2?;}${M3?,}${M4?)}\n\
 # Immediate function\n\
 trigger \\(?f\\(\n\
 endTrigger \\)?\n\
 snippet f(\n\
-	(function(${1}) {\n\
+	(function(${1})\n\
+	{\n\
 		${0:${TM_SELECTED_TEXT:/* code */}}\n\
 	}(${1}));\n\
 # if\n\
 snippet if\n\
-	if (${1:true}) {\n\
+	if (${1:true})\n\
+	{\n\
 		${0}\n\
 	}\n\
 # if ... else\n\
 snippet ife\n\
-	if (${1:true}) {\n\
+	if (${1:true})\n\
+	{\n\
 		${2}\n\
-	} else {\n\
+	} else\n\
+	{\n\
 		${0}\n\
 	}\n\
 # tertiary conditional\n\
@@ -41,7 +48,8 @@ snippet ter\n\
 	${1:/* condition */} ? ${2:a} : ${3:b}\n\
 # switch\n\
 snippet switch\n\
-	switch (${1:expression}) {\n\
+	switch (${1:expression})\n\
+	{\n\
 		case '${3:case}':\n\
 			${4:// code}\n\
 			break;\n\
@@ -58,23 +66,27 @@ snippet case\n\
 \n\
 # while (...) {...}\n\
 snippet wh\n\
-	while (${1:/* condition */}) {\n\
+	while (${1:/* condition */})\n\
+	{\n\
 		${0:/* code */}\n\
 	}\n\
 # try\n\
 snippet try\n\
-	try {\n\
+	try\n\
+	{\n\
 		${0:/* code */}\n\
-	} catch (e) {}\n\
+	} catch (e) { }\n\
 # do...while\n\
 snippet do\n\
-	do {\n\
+	do\n\
+	{\n\
 		${2:/* code */}\n\
 	} while (${1:/* condition */});\n\
 # Object Method\n\
 snippet :f\n\
 regex /([,{[])|^\\s*/:f/\n\
-	${1:method_name}: function(${2:attribute}) {\n\
+	${1:method_name}: function(${2:attribute})\n\
+	{\n\
 		${0}\n\
 	}${3:,}\n\
 # setTimeout function\n\
@@ -95,7 +107,8 @@ snippet ret\n\
 	return ${1:result}\n\
 # for (property in object ) { ... }\n\
 snippet fori\n\
-	for (var ${1:prop} in ${2:Things}) {\n\
+	for (var ${1:prop} in ${2:Things})\n\
+	{\n\
 		${0:$2[$1]}\n\
 	}\n\
 # hasOwnProperty\n\
@@ -122,18 +135,22 @@ snippet jsons\n\
 	JSON.stringify(${1:object});\n\
 # self-defining function\n\
 snippet sdf\n\
-	var ${1:function_name} = function(${2:argument}) {\n\
+	var ${1:function_name} = function(${2:argument})\n\
+	{\n\
 		${3:// initial code ...}\n\
 \n\
-		$1 = function($2) {\n\
+		$1 = function($2)\n\
+		{\n\
 			${4:// main code}\n\
 		};\n\
 	}\n\
 # singleton\n\
 snippet sing\n\
-	function ${1:Singleton} (${2:argument}) {\n\
+	function ${1:Singleton} (${2:argument})\n\
+	{\n\
 		var instance;\n\
-		$1 = function $1($2) {\n\
+		$1 = function $1($2)\n\
+		{\n\
 			return instance;\n\
 		};\n\
 		$1.prototype = this;\n\
@@ -147,35 +164,41 @@ snippet sing\n\
 # class\n\
 snippet class\n\
 regex /^\\s*/clas{0,2}/\n\
-	var ${1:class} = function(${20}) {\n\
+	var ${1:class} = function(${20})\n\
+	{\n\
 		$40$0\n\
 	};\n\
 	\n\
-	(function() {\n\
+	(function()\n\
+	{\n\
 		${60:this.prop = \"\"}\n\
 	}).call(${1:class}.prototype);\n\
 	\n\
 	exports.${1:class} = ${1:class};\n\
 # \n\
 snippet for-\n\
-	for (var ${1:i} = ${2:Things}.length; ${1:i}--; ) {\n\
+	for (var ${1:i} = ${2:Things}.length; ${1:i}--; )\n\
+	{\n\
 		${0:${2:Things}[${1:i}];}\n\
 	}\n\
 # for (...) {...}\n\
 snippet for\n\
-	for (var ${1:i} = 0; $1 < ${2:Things}.length; $1++) {\n\
+	for (var ${1:i} = 0; $1 < ${2:Things}.length; $1++)\n\
+	{\n\
 		${3:$2[$1]}$0\n\
 	}\n\
 # for (...) {...} (Improved Native For-Loop)\n\
 snippet forr\n\
-	for (var ${1:i} = ${2:Things}.length - 1; $1 >= 0; $1--) {\n\
+	for (var ${1:i} = ${2:Things}.length - 1; $1 >= 0; $1--)\n\
+	{\n\
 		${3:$2[$1]}$0\n\
 	}\n\
 \n\
 \n\
 #modules\n\
 snippet def\n\
-	ace.define(function(require, exports, module) {\n\
+	ace.define(function(require, exports, module)\n\
+	{\n\
 	\"use strict\";\n\
 	var ${1/.*\\///} = require(\"${1}\");\n\
 	\n\
